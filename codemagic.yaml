@@ -7,8 +7,8 @@
 # Environment variable groups (App settings › Environment variables):
 #   blith_ai       OPENROUTER_API_KEY (secure), optional: enables AI answers in Ask; without it
 #                  Ask answers on-device.
-#   blith_signing  CERTIFICATE_PRIVATE_KEY (secure): private key of Blith's Apple Distribution
-#                  certificate, used by ios-release.
+#   Signing        ios-release uses a Distribution certificate saved in the Codemagic account's
+#                  Code signing identities (Team/Personal settings), like Skintel does. No key in env.
 #
 # Workflows
 #   ios-ci             Core tests + simulator build + screenshots. No signing needed.
@@ -227,8 +227,11 @@ workflows:
       xcode: latest
       groups:
         - blith_ai
-        # CERTIFICATE_PRIVATE_KEY (secure): the private key of Blith's Apple Distribution certificate.
-        - blith_signing
+      # The Distribution certificate (and its private key) lives in this Codemagic account's
+      # Code signing identities; Codemagic fetches or creates the App Store profile for the bundle id.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.blith.health
       vars:
         BUNDLE_ID: "com.blith.health"
         APP_NAME: "Blith"
@@ -273,38 +276,10 @@ workflows:
       - name: Generate Xcode project
         script: cd "$CM_BUILD_DIR/ios" && xcodegen generate
 
-      # Finds (or, the first time, creates) the distribution certificate that belongs to
-      # CERTIFICATE_PRIVATE_KEY and an App Store profile for it, then signs with them.
-      # The key is rebuilt as clean PEM first: pasting it on a phone can turn "-----" into long
-      # dashes or break the line wrapping, which the CLI rejects.
+      # ios_signing (above) already put the certificate and App Store profile on the machine.
       - name: Set up code signing
         script: |
           set -euo pipefail
-          keychain initialize
-          KEY_FILE="$(mktemp)"
-          trap 'rm -f "$KEY_FILE"' EXIT
-          python3 - "$KEY_FILE" <<'PY'
-          import os, re, sys, textwrap
-          raw = os.environ.get("CERTIFICATE_PRIVATE_KEY", "")
-          print(f"CERTIFICATE_PRIVATE_KEY length: {len(raw)} characters")
-          # \s also matches the non-breaking spaces a phone paste can leave between words.
-          m = re.search(r"BEGIN\s+((?:RSA\s+|EC\s+)?PRIVATE\s+KEY)(.*?)END", raw, re.S)
-          if m:
-              kind = re.sub(r"\s+", " ", m.group(1))
-              body = re.sub(r"[^A-Za-z0-9+/=]", "", m.group(2))
-          else:
-              # BEGIN/END lines were lost: accept the bare base64 body of an RSA key.
-              kind = "RSA PRIVATE KEY"
-              body = re.sub(r"[^A-Za-z0-9+/=]", "", raw)
-              if len(body) < 1000:
-                  sys.exit("CERTIFICATE_PRIVATE_KEY is empty or too short: paste the whole key again")
-          with open(sys.argv[1], "w") as f:
-              f.write(f"-----BEGIN {kind}-----\n" + "\n".join(textwrap.wrap(body, 64)) + f"\n-----END {kind}-----\n")
-          print(f"Certificate key: {kind}, {len(body)} base64 characters")
-          PY
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --platform IOS --strict-match-identifier --create \
-            --certificate-key "@file:$KEY_FILE"
-          keychain add-certificates
           xcode-project use-profiles
 
       - name: Next build number from App Store Connect
