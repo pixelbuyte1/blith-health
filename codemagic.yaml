@@ -276,10 +276,26 @@ workflows:
       - name: Generate Xcode project
         script: cd "$CM_BUILD_DIR/ios" && xcodegen generate
 
-      # ios_signing (above) already put the certificate and App Store profile on the machine.
+      # ios_signing (above) puts the Distribution certificate in the keychain but has no App Store
+      # profile for this bundle id. Create one against the account's existing Distribution
+      # certificates (no new certificate, so no private key is needed) and make it the only profile
+      # on the machine, as Skintel's release does.
       - name: Set up code signing
         script: |
           set -euo pipefail
+          CERT_IDS=$(app-store-connect certificates list --type DISTRIBUTION --json \
+            | python3 -c 'import json, sys; print(" ".join(c["id"] for c in json.load(sys.stdin)))')
+          test -n "$CERT_IDS"
+          NEW_PROFILES="$HOME/blith_profiles"
+          mkdir -p "$NEW_PROFILES"
+          app-store-connect profiles create "$BUNDLE_RID" --type IOS_APP_STORE \
+            --certificate-ids $CERT_IDS --name "Blith App Store $(date +%s)" \
+            --profiles-dir "$NEW_PROFILES" --save
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          rm -f "$PROFILES_DIR"/*.mobileprovision
+          cp "$NEW_PROFILES"/*.mobileprovision "$PROFILES_DIR"/
+          ls -1 "$PROFILES_DIR"
           xcode-project use-profiles
 
       - name: Next build number from App Store Connect
