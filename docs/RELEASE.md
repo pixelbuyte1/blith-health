@@ -23,7 +23,7 @@ Status: ✅ done in code · 🔧 needs an external step · ⚠️ known gap
 | Embedded API key | ⚠️ | The OpenRouter key ships inside the app binary. Before a wide release, move AI calls behind a small server proxy with per-install rate limits |
 | App Store Connect app record | 🔧 | Create the app once in App Store Connect (My Apps › + › New App, bundle ID `com.blith.health`). Apple's API cannot create apps |
 | App ID + HealthKit capability | ✅ | Registered by the `ios-setup` workflow (idempotent): `com.blith.health` with HealthKit |
-| Codemagic signing | ✅ | `ios-release` signs with a Blith Apple Distribution certificate whose private key is the secure variable `CERTIFICATE_PRIVATE_KEY` (group `blith_signing`); the certificate and profile are created on first use through the team's App Store Connect integration `codemagic1` |
+| Codemagic signing | ✅ | `ios-release` uses `ios_signing`: the Apple Distribution certificate and its private key are saved in the Codemagic account's Code signing identities (same as Skintel), and Codemagic fetches or creates the App Store profile for `com.blith.health` through the App Store Connect integration `codemagic1`. No key in environment variables. |
 | App Privacy answers | 🔧 | Health & Fitness + User Content: collected only when AI answers are on, not linked, not tracking, App Functionality |
 | Screenshots | 🔧 | `ios-ci` produces simulator screenshots with sample data as a starting point |
 
@@ -49,5 +49,5 @@ Every release:
 
 Notes:
 
-- Revoking Blith's certificate in the developer portal is safe: delete the `CERTIFICATE_PRIVATE_KEY` variable, add a new key, and the next release creates a new certificate.
+- Apple allows 3 Distribution certificates per account, so Blith shares the one Skintel uses. The Codemagic account that runs `ios-release` must have that certificate saved under Code signing identities.
 - The OpenRouter key is embedded in TestFlight builds through the `blith_ai` group. Move AI calls behind a server proxy before a public release.
