@@ -132,6 +132,13 @@ Missing data and real zero always look different.
   exactly: 242 named muscle parts. Both are CC BY-SA (attribution in `design/body3d/LICENSE-ASSETS.md`,
   `body3d.json` and on the Body screen). Notes anchor to regions, never screen points. The 3D stage is a
   dark imaging chamber in both appearances.
+- **Muscle layer look ("Soft radiant")** — a stylised anatomical mannequin, never exposed red tissue:
+  warm ivory resin with low-contrast muscle borders, a cool rim and a smooth head (the skin's head
+  replaces the facial muscles). States: resting; touched or chosen region (pale blue edge); selected
+  muscle (soft blue core, lavender edge, faint cyan inner light, one small swell that settles); everything
+  else dims a little. Bloom is nearly off on this layer, so nothing glows much. "Minimal glow" flattens the
+  tone further for people who want less detail. The selected part shows a small figure glyph (code-drawn,
+  side-aware) with a plain line on what the muscle does. The first three visits show a short how-to.
 - **Fonts** — Geist and Geist Mono, SIL OFL 1.1 (`Resources/Fonts/OFL-Geist.txt`).
 - **No mascot** in this phase.
 

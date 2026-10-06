@@ -8,6 +8,9 @@ import Foundation
 enum LaunchOptions {
     static var args: UserDefaults { .standard }
 
+    /// True for scripted CI launches (they always pass `-BlithDemo`); first-run hints stay hidden.
+    static var isScripted: Bool { args.string(forKey: "BlithDemo") != nil }
+
     @MainActor
     static func applyIfPresent(to app: AppModel) {
         if args.bool(forKey: "BlithResetOnboarding") {
