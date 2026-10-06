@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blith 2.0 · Today, light</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.bl{--base:#0C1014;--surface:#131920;--raised:#1A222B;--line:rgba(241,244,246,0.08);--line2:rgba(241,244,246,0.16);--t1:#F1F4F6;--t2:#A9B4BF;--t3:#97A3AF;--act:#D9CDB8;--actink:#0C1014;--primed:#3FD0B0;--steady:#F2B53E;--strained:#F0545E;--load:#4DA3F7;--sleep:#8C9BF0;--vitals:#7CCBE6;--deep:#4F67BD;--core:#7F95E3;--rem:#B5C4F5;--band:rgba(169,180,191,0.17);--track:rgba(241,244,246,0.07);--glass:rgba(24,31,39,0.74);--shadow:rgba(0,0,0,0.38);-webkit-font-smoothing:antialiased}
+.bl[data-theme="light"]{--base:#F4F2EE;--surface:#FFFFFF;--raised:#ECE9E3;--line:rgba(18,23,27,0.08);--line2:rgba(18,23,27,0.16);--t1:#12171B;--t2:#4B5762;--t3:#5F6B76;--act:#12171B;--actink:#F4F2EE;--primed:#077A67;--steady:#946000;--strained:#C4283C;--load:#0B63C5;--sleep:#4F5FC4;--vitals:#16708F;--deep:#34489A;--core:#5F78D6;--rem:#9FB2EE;--band:rgba(75,87,98,0.13);--track:rgba(18,23,27,0.06);--glass:rgba(255,255,255,0.8);--shadow:rgba(18,23,27,0.12)}
+.bl .n{font-stretch:75%;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.015em;line-height:0.86}
+.bl .cap{font-size:12px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t3)}
+.bl button{font-family:inherit}
+</style>
+</helmet>
+<div class="bl" data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 62px 16px 0; background: var(--base); color: var(--t1); font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; gap: 30px">
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span class="cap">Tuesday 6 October</span>
+<h1 style="margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em">Today</h1>
+</div>
+<button aria-label="Profile and settings" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: 1px solid var(--line2); background: var(--surface); color: var(--t2); display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 4a4 4 0 1 0 0 8a4 4 0 1 0 0-8ZM4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+</button>
+</header>
+
+<section aria-label="Readiness" style="display: flex; flex-direction: column; gap: 14px">
+<span class="cap">Readiness</span>
+<div style="display: flex; align-items: flex-end; gap: 18px">
+<span class="n" style="font-size: 124px">82</span>
+<div style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 700; color: var(--primed)"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 17H2Z" style="fill: currentColor"></path></svg>Primed</span>
+<span style="font-size: 15px; color: var(--t2)">Above your usual 68–80</span>
+</div>
+</div>
+<div style="position: relative; height: 46px">
+<div style="position: absolute; left: 0; right: 0; top: 12px; height: 8px; border-radius: 4px; background: var(--track)"></div>
+<div style="position: absolute; left: 68%; width: 12%; top: 8px; height: 16px; border-radius: 5px; background: var(--band); box-shadow: inset 0 0 0 1px var(--line2)"></div>
+<div style="position: absolute; left: 82%; top: 3px; width: 4px; height: 26px; margin-left: -2px; border-radius: 2px; background: var(--primed)"></div>
+<span style="position: absolute; left: 0; top: 32px; font-size: 12px; color: var(--t3)">0</span>
+<span style="position: absolute; left: 74%; top: 32px; transform: translateX(-50%); font-size: 12px; color: var(--t3); white-space: nowrap">usual</span>
+<span style="position: absolute; right: 0; top: 32px; font-size: 12px; color: var(--t3)">100</span>
+</div>
+<p style="margin: 0; font-size: 17px; line-height: 1.45; color: var(--t2)">HRV is above your usual range and you slept 7h 42m, your longest night this week.</p>
+</section>
+
+<section aria-label="Suggestion" style="display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line)">
+<div style="flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--raised); color: var(--primed); display: flex; align-items: center; justify-content: center">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<span style="font-size: 17px; font-weight: 650; line-height: 1.3">Good day for your hardest session</span>
+<span style="font-size: 15px; color: var(--t2)">Aim for a load of 380–480.</span>
+</div>
+</section>
+
+<section aria-label="What is behind it" style="display: flex; flex-direction: column; gap: 12px">
+<span class="cap">What's behind it</span>
+<div style="border-radius: 22px; background: var(--surface); border: 1px solid var(--line); overflow: hidden">
+<sc-for list="{{drivers}}" as="r" hint-placeholder-count="4">
+<div style="padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; border-top: {{r.sep}}">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+<span style="font-size: 15px; color: var(--t2)">{{r.name}}</span>
+<span style="font-size: 13px; color: var(--t3); white-space: nowrap">{{r.usual}}</span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px">
+<span style="display: flex; align-items: baseline; gap: 5px"><span class="n" style="font-size: 36px">{{r.value}}</span><span style="font-size: 14px; color: var(--t3)">{{r.unit}}</span></span>
+<span style="display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--t2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.glyph}}"></path></svg>{{r.dir}}</span>
+</div>
+<div style="position: relative; height: 12px">
+<div style="position: absolute; left: 0; right: 0; top: 4px; height: 4px; border-radius: 2px; background: var(--track)"></div>
+<div style="position: absolute; left: {{r.bar.bandL}}; width: {{r.bar.bandW}}; top: 2px; height: 8px; border-radius: 4px; background: var(--band)"></div>
+<div style="position: absolute; left: {{r.bar.mark}}; top: 0; width: 12px; height: 12px; margin-left: -6px; border-radius: 6px; background: {{r.color}}; box-shadow: 0 0 0 2.5px var(--surface)"></div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<nav aria-label="Tabs" style="position: absolute; left: 16px; right: 16px; bottom: 28px; height: 64px; box-sizing: border-box; padding: 6px; border-radius: 32px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5); border: 1px solid var(--line2); box-shadow: 0 12px 32px var(--shadow); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<a href="{{t.href}}" aria-current="{{t.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 26px; background: {{t.bg}}; color: {{t.color}}; font-size: 11px; font-weight: 600; text-decoration: none">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"></path></svg>
+<span>{{t.label}}</span>
+</a>
+</sc-for>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"light"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const on = st.on || { Sore: true };
+    const pct = (v, min, max) => (Math.max(0, Math.min(1, (v - min) / (max - min))) * 100).toFixed(1) + '%';
+    const range = (lo, hi, v, min, max) => ({ bandL: pct(lo, min, max), bandW: ((hi - lo) / (max - min) * 100).toFixed(1) + '%', mark: pct(v, min, max) });
+    const UP = 'M6 14l6-6 6 6', FLAT = 'M5 12h14', DOWN = 'M6 10l6 6 6-6';
+    const drivers = [
+      { name: 'Heart rate variability', value: '58', unit: 'ms', usual: 'Usual 44–54', dir: 'Above usual', glyph: UP, color: 'var(--vitals)', bar: range(44, 54, 58, 30, 70) },
+      { name: 'Resting heart rate', value: '52', unit: 'bpm', usual: 'Usual 51–56', dir: 'Within usual', glyph: FLAT, color: 'var(--vitals)', bar: range(51, 56, 52, 44, 64) },
+      { name: 'Sleep', value: '7h 42m', unit: '', usual: 'Usual 6h 50m–7h 30m', dir: 'Above usual', glyph: UP, color: 'var(--sleep)', bar: range(410, 450, 462, 300, 560) },
+      { name: 'Respiratory rate', value: '14.2', unit: 'br/min', usual: 'Usual 13.8–14.9', dir: 'Within usual', glyph: FLAT, color: 'var(--vitals)', bar: range(13.8, 14.9, 14.2, 12, 17) }
+    ].slice(0, 2).map((r, i) => ({ ...r, sep: i === 0 ? '0' : '1px solid var(--line)' }));
+    const week = [['W', 420], ['T', 510], ['F', 0], ['S', 455], ['S', null], ['M', 300], ['T', 146]];
+    const bars = week.map(([d, v], i) => {
+      const today = i === week.length - 1;
+      const base = { d: d, fw: today ? '700' : '500', lc: today ? 'var(--t1)' : 'var(--t3)' };
+      if (v === null) return { ...base, h: '96px', bg: 'transparent', border: '1.5px dashed var(--line2)' };
+      if (v === 0) return { ...base, h: '3px', bg: 'var(--t3)', border: '0' };
+      return { ...base, h: (v / 600 * 96).toFixed(1) + 'px', bg: today ? 'var(--load)' : 'color-mix(in srgb, var(--load) 48%, transparent)', border: '0' };
+    });
+    const names = ['Alcohol', 'Late meal', 'Travel', 'Sore', 'Ill', 'Stressed'];
+    const tags = names.map((n) => ({
+      t: n,
+      pressed: on[n] ? 'true' : 'false',
+      bg: on[n] ? 'var(--act)' : 'var(--surface)',
+      fg: on[n] ? 'var(--actink)' : 'var(--t1)',
+      bd: on[n] ? 'var(--act)' : 'var(--line2)',
+      toggle: () => this.setState({ on: { ...on, [n]: !on[n] } })
+    }));
+    const nights = [1, 1, 0, 1, 0, 1, 1].map((x) => ({ bg: x ? 'var(--t2)' : 'transparent', bd: x ? '0' : '1.5px solid var(--t3)' }));
+    const IC = {
+      Today: 'M3 17h18M7 17a5 5 0 0 1 10 0M12 6v3M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8',
+      Trends: 'M3 20h18M4 15l5-5 4 3 7-7',
+      Sleep: 'M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z',
+      Body: 'M12 3.5a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4ZM6.5 10.5h11M12 10.5v4.5M12 15l-3 5.5M12 15l3 5.5',
+      Ask: 'M4.5 5.5h15v10h-8.5l-4 3.5v-3.5h-2.5Z'
+    };
+    const files = { Today: 'Main.dc.html', Trends: 'Trends.dc.html', Sleep: 'Sleep.dc.html', Body: 'Body.dc.html', Ask: 'Ask.dc.html' };
+    const ACTIVE = 'Today';
+    const tabs = Object.keys(IC).map((k) => ({ label: k, href: files[k], icon: IC[k], color: k === ACTIVE ? 'var(--t1)' : 'var(--t3)', bg: k === ACTIVE ? 'var(--line)' : 'transparent', current: k === ACTIVE ? 'page' : 'false' }));
+    return { theme: this.props.theme ?? 'light', drivers, bars, tags, nights, tabs };
+  }
+}
+</script>
+</body>
+</html>

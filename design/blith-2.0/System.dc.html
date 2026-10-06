@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blith 2.0 · System</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.bl{--base:#0C1014;--surface:#131920;--raised:#1A222B;--line:rgba(241,244,246,0.08);--line2:rgba(241,244,246,0.16);--t1:#F1F4F6;--t2:#A9B4BF;--t3:#97A3AF;--act:#D9CDB8;--actink:#0C1014;--primed:#3FD0B0;--steady:#F2B53E;--strained:#F0545E;--load:#4DA3F7;--sleep:#8C9BF0;--vitals:#7CCBE6;--deep:#4F67BD;--core:#7F95E3;--rem:#B5C4F5;--band:rgba(169,180,191,0.17);--track:rgba(241,244,246,0.07);--glass:rgba(24,31,39,0.74);--shadow:rgba(0,0,0,0.38);-webkit-font-smoothing:antialiased}
+.bl[data-theme="light"]{--base:#F4F2EE;--surface:#FFFFFF;--raised:#ECE9E3;--line:rgba(18,23,27,0.08);--line2:rgba(18,23,27,0.16);--t1:#12171B;--t2:#4B5762;--t3:#5F6B76;--act:#12171B;--actink:#F4F2EE;--primed:#077A67;--steady:#946000;--strained:#C4283C;--load:#0B63C5;--sleep:#4F5FC4;--vitals:#16708F;--deep:#34489A;--core:#5F78D6;--rem:#9FB2EE;--band:rgba(75,87,98,0.13);--track:rgba(18,23,27,0.06);--glass:rgba(255,255,255,0.8);--shadow:rgba(18,23,27,0.12)}
+.bl .n{font-stretch:75%;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.015em;line-height:0.86}
+.bl .cap{font-size:12px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t3)}
+</style>
+</helmet>
+<div class="bl" data-theme="dark" style="width: 1200px; height: 1400px; overflow: hidden; box-sizing: border-box; padding: 56px 48px; background: var(--base); color: var(--t1); font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; gap: 32px">
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span class="cap">Blith 2.0 · tokens and patterns</span>
+<h1 style="margin: 0; font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -0.015em">Colour only where it means something</h1>
+</div>
+<p style="margin: 0; max-width: 360px; font-size: 15px; line-height: 1.5; color: var(--t2)">Dark first, with a real light mode. Neutrals carry the screen; three status hues and three signal hues carry the data.</p>
+</header>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px">
+<sc-for list="{{panels}}" as="p" hint-placeholder-count="2">
+<section class="bl" data-theme="{{p.theme}}" aria-label="{{p.title}}" style="padding: 24px; border-radius: 28px; background: var(--base); border: 1px solid var(--line2); color: var(--t1); display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-size: 22px; font-weight: 700">{{p.title}}</span>
+<span style="font-size: 13px; color: var(--t3)">{{p.sub}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 12px">
+<sc-for list="{{p.swatches}}" as="s" hint-placeholder-count="16">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="height: 52px; border-radius: 12px; background: {{s.v}}; box-shadow: inset 0 0 0 1px var(--line2)"></div>
+<span style="font-size: 13px; font-weight: 600">{{s.name}}</span>
+<span style="font-size: 12px; color: var(--t3); font-variant-numeric: tabular-nums">{{s.hex}}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; border-radius: 20px; background: var(--surface); border: 1px solid var(--line)">
+<sc-for list="{{p.statuses}}" as="s" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-top: {{s.sep}}">
+<span class="n" style="width: 52px; font-size: 40px">{{s.num}}</span>
+<span style="display: flex; align-items: center; gap: 7px; width: 120px; font-size: 19px; font-weight: 700; color: {{s.color}}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{s.glyph}}" style="fill: currentColor"></path></svg>{{s.word}}</span>
+<span style="font-size: 14px; color: var(--t2)">{{s.meaning}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px">
+<section aria-label="Type" style="padding: 24px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px">
+<span class="cap">Type · SF Pro in the app, Archivo here</span>
+<div style="display: flex; align-items: flex-end; gap: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--line)">
+<span class="n" style="font-size: 112px">82</span>
+<span style="padding-bottom: 8px; font-size: 13px; line-height: 1.5; color: var(--t2)">Hero numeral<br>Condensed bold, tabular, 96–124 pt</span>
+</div>
+<sc-for list="{{type}}" as="t" hint-placeholder-count="5">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px">
+<span style="font-size: {{t.size}}; font-weight: {{t.weight}}; font-stretch: {{t.stretch}}; letter-spacing: {{t.track}}; text-transform: {{t.tt}}; color: {{t.color}}">{{t.sample}}</span>
+<span style="flex: none; font-size: 12px; color: var(--t3)">{{t.spec}}</span>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="Patterns" style="padding: 24px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 20px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span class="cap">Range bar</span>
+<div style="position: relative; height: 18px">
+<div style="position: absolute; left: 0; right: 0; top: 6px; height: 6px; border-radius: 3px; background: var(--track)"></div>
+<div style="position: absolute; left: 40%; width: 28%; top: 3px; height: 12px; border-radius: 4px; background: var(--band); box-shadow: inset 0 0 0 1px var(--line2)"></div>
+<div style="position: absolute; left: 76%; top: 2px; width: 14px; height: 14px; margin-left: -7px; border-radius: 7px; background: var(--vitals); box-shadow: 0 0 0 2.5px var(--surface)"></div>
+</div>
+<span style="font-size: 13px; line-height: 1.45; color: var(--t2)">Your usual as a band, today as a marker. Replaces every dial.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span class="cap">Band and line</span>
+<svg width="100%" height="52" viewBox="0 0 220 52" preserveAspectRatio="none" aria-hidden="true">
+<rect x="0" y="16" width="220" height="20" style="fill: var(--band)"></rect>
+<path d="M2 30L24 26L46 32L68 24L90 28L112 40L134 30L156 22L178 25L200 18L218 12" vector-effect="non-scaling-stroke" style="fill: none; stroke: var(--vitals); stroke-width: 2; stroke-linejoin: round"></path>
+</svg>
+<span style="font-size: 13px; line-height: 1.45; color: var(--t2)">Deviation is visible without maths.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span class="cap">Zero vs missing</span>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; height: 52px; align-items: end">
+<div style="height: 40px; border-radius: 6px 6px 2px 2px; background: var(--load)"></div>
+<div style="height: 3px; background: var(--t3)"></div>
+<div style="height: 52px; box-sizing: border-box; border-radius: 6px 6px 2px 2px; border: 1.5px dashed var(--line2)"></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; font-size: 12px; color: var(--t3); text-align: center"><span>Value</span><span>Zero</span><span>Missing</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span class="cap">Calibrating</span>
+<span style="font-size: 17px; font-weight: 650">Day 3 of 7</span>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{calib}}" as="c" hint-placeholder-count="7">
+<span style="height: 8px; box-sizing: border-box; border-radius: 4px; background: {{c.bg}}; border: {{c.bd}}"></span>
+</sc-for>
+</div>
+<span style="font-size: 13px; line-height: 1.45; color: var(--t2)">Readiness appears after 7 nights. Sleep and load show from day one.</span>
+</div>
+</section>
+</div>
+
+<section aria-label="Rules" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="6">
+<div style="padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 15px; font-weight: 650">{{r.t}}</span>
+<span style="font-size: 13px; line-height: 1.45; color: var(--t2)">{{r.d}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const T = [
+      ['Base', '--base', '#0C1014', '#F4F2EE'],
+      ['Surface', '--surface', '#131920', '#FFFFFF'],
+      ['Raised', '--raised', '#1A222B', '#ECE9E3'],
+      ['Action', '--act', '#D9CDB8', '#12171B'],
+      ['Text 1', '--t1', '#F1F4F6', '#12171B'],
+      ['Text 2', '--t2', '#A9B4BF', '#4B5762'],
+      ['Text 3', '--t3', '#97A3AF', '#5F6B76'],
+      ['Primed', '--primed', '#3FD0B0', '#077A67'],
+      ['Steady', '--steady', '#F2B53E', '#946000'],
+      ['Strained', '--strained', '#F0545E', '#C4283C'],
+      ['Load', '--load', '#4DA3F7', '#0B63C5'],
+      ['Sleep', '--sleep', '#8C9BF0', '#4F5FC4'],
+      ['Vitals', '--vitals', '#7CCBE6', '#16708F'],
+      ['Deep', '--deep', '#4F67BD', '#34489A'],
+      ['Core', '--core', '#7F95E3', '#5F78D6'],
+      ['REM', '--rem', '#B5C4F5', '#9FB2EE']
+    ];
+    const panels = [
+      { theme: 'dark', title: 'Dark', sub: 'The signature look', swatches: T.map((t) => ({ name: t[0], v: 'var(' + t[1] + ')', hex: t[2] })) },
+      { theme: 'light', title: 'Light', sub: 'Designed, not inverted', swatches: T.map((t) => ({ name: t[0], v: 'var(' + t[1] + ')', hex: t[3] })) }
+    ];
+    const statuses = [
+      { num: '82', word: 'Primed', color: 'var(--primed)', glyph: 'M12 3l10 17H2Z', meaning: 'Above your usual' },
+      { num: '71', word: 'Steady', color: 'var(--steady)', glyph: 'M3 9h18v6H3Z', meaning: 'Within your usual' },
+      { num: '54', word: 'Strained', color: 'var(--strained)', glyph: 'M12 21L2 4h20Z', meaning: 'Below your usual' }
+    ].map((s, i) => ({ ...s, sep: i === 0 ? '0' : '1px solid var(--line)' }));
+    const type = [
+      { sample: 'Today', size: '34px', weight: '700', stretch: '100%', track: '-0.01em', tt: 'none', color: 'var(--t1)', spec: 'Large title · 34 Bold' },
+      { sample: '58 ms', size: '34px', weight: '700', stretch: '75%', track: '-0.015em', tt: 'none', color: 'var(--t1)', spec: 'Metric · condensed 28–36' },
+      { sample: 'HRV is above your usual range.', size: '17px', weight: '400', stretch: '100%', track: '0', tt: 'none', color: 'var(--t1)', spec: 'Body · 17 Regular' },
+      { sample: 'Usual 44–54', size: '13px', weight: '400', stretch: '100%', track: '0', tt: 'none', color: 'var(--t3)', spec: 'Secondary · 13–15' },
+      { sample: 'Readiness', size: '12px', weight: '600', stretch: '100%', track: '0.09em', tt: 'uppercase', color: 'var(--t3)', spec: 'Label · 12 Semibold caps' }
+    ];
+    const calib = [1, 1, 1, 0, 0, 0, 0].map((x) => ({ bg: x ? 'var(--act)' : 'transparent', bd: x ? '0' : '1px solid var(--line2)' }));
+    const rules = [
+      { t: 'No gauges, no rings', d: 'Range bars, band and line, bars from zero.' },
+      { t: 'Word, glyph and number', d: 'Status never relies on colour alone. Readiness is never a percentage.' },
+      { t: 'Direction is not judgement', d: 'Above or below usual is said plainly, in neutral ink.' },
+      { t: 'Glass only where it floats', d: 'Tab bar and the Ask composer. Content stays solid.' },
+      { t: 'Motion once', d: 'Numbers roll in once, charts draw once. Nothing pulses or glows.' },
+      { t: 'Honest gaps', d: 'Missing nights are hollow. Streaks read “5 of the last 7 nights”.' }
+    ];
+    panels.forEach((p) => { p.statuses = statuses; });
+    return { panels, type, calib, rules };
+  }
+}
+</script>
+</body>
+</html>

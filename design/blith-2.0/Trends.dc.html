@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blith 2.0 · Trends</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.bl{--base:#0C1014;--surface:#131920;--raised:#1A222B;--line:rgba(241,244,246,0.08);--line2:rgba(241,244,246,0.16);--t1:#F1F4F6;--t2:#A9B4BF;--t3:#97A3AF;--act:#D9CDB8;--actink:#0C1014;--primed:#3FD0B0;--steady:#F2B53E;--strained:#F0545E;--load:#4DA3F7;--sleep:#8C9BF0;--vitals:#7CCBE6;--deep:#4F67BD;--core:#7F95E3;--rem:#B5C4F5;--band:rgba(169,180,191,0.17);--track:rgba(241,244,246,0.07);--glass:rgba(24,31,39,0.74);--shadow:rgba(0,0,0,0.38);-webkit-font-smoothing:antialiased}
+.bl[data-theme="light"]{--base:#F4F2EE;--surface:#FFFFFF;--raised:#ECE9E3;--line:rgba(18,23,27,0.08);--line2:rgba(18,23,27,0.16);--t1:#12171B;--t2:#4B5762;--t3:#5F6B76;--act:#12171B;--actink:#F4F2EE;--primed:#077A67;--steady:#946000;--strained:#C4283C;--load:#0B63C5;--sleep:#4F5FC4;--vitals:#16708F;--deep:#34489A;--core:#5F78D6;--rem:#9FB2EE;--band:rgba(75,87,98,0.13);--track:rgba(18,23,27,0.06);--glass:rgba(255,255,255,0.8);--shadow:rgba(18,23,27,0.12)}
+.bl .n{font-stretch:75%;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.015em;line-height:0.86}
+.bl .cap{font-size:12px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t3)}
+.bl button{font-family:inherit}
+</style>
+</helmet>
+<div class="bl" data-theme="{{theme}}" style="position: relative; width: 390px; height: 1480px; overflow: hidden; box-sizing: border-box; padding: 62px 16px 0; background: var(--base); color: var(--t1); font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; gap: 24px">
+
+<header style="display: flex; flex-direction: column; gap: 4px">
+<span class="cap">7 September – 6 October</span>
+<h1 style="margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em">Trends</h1>
+</header>
+
+<div role="group" aria-label="Time range" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 14px; background: var(--raised)">
+<sc-for list="{{ranges}}" as="r" hint-placeholder-count="4">
+<button aria-pressed="{{r.pressed}}" onClick="{{r.pick}}" style="height: 38px; border: 0; border-radius: 11px; background: {{r.bg}}; color: {{r.fg}}; font-size: 15px; font-weight: 650; cursor: pointer; box-shadow: {{r.sh}}">{{r.label}}</button>
+</sc-for>
+</div>
+
+<div style="display: flex; gap: 8px; margin-right: -16px; overflow: hidden">
+<sc-for list="{{metrics}}" as="m" hint-placeholder-count="6">
+<button aria-pressed="{{m.pressed}}" style="flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid {{m.bd}}; background: {{m.bg}}; color: {{m.fg}}; font-size: 15px; font-weight: 600; cursor: pointer">{{m.label}}</button>
+</sc-for>
+</div>
+
+<section aria-label="Heart rate variability" style="padding: 18px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px">
+<span class="cap">Heart rate variability</span>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<span style="display: flex; align-items: baseline; gap: 6px"><span class="n" style="font-size: 64px">52</span><span style="font-size: 15px; color: var(--t2)">ms average</span></span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; padding-bottom: 4px">
+<span style="display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 650; color: var(--t1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 14l6-6 6 6"></path></svg>3 ms</span>
+<span style="font-size: 13px; color: var(--t3)">vs previous 30 days</span>
+</span>
+</div>
+<div style="position: relative">
+<svg width="322" height="190" viewBox="0 0 322 190" role="img" aria-label="Nightly HRV for 30 nights against your usual range of 44 to 54 milliseconds">
+<rect x="0" y="{{c.bandY}}" width="296" height="{{c.bandH}}" rx="4" style="fill: var(--band)"></rect>
+<rect x="{{c.gapX}}" y="8" width="{{c.gapW}}" height="166" rx="5" style="fill: var(--track)"></rect>
+<path d="{{c.grid}}" style="stroke: var(--line); stroke-width: 1"></path>
+<text x="322" y="{{c.l60}}" text-anchor="end" style="fill: var(--t3); font-size: 11px">60</text>
+<text x="322" y="{{c.l50}}" text-anchor="end" style="fill: var(--t3); font-size: 11px">50</text>
+<text x="322" y="{{c.l40}}" text-anchor="end" style="fill: var(--t3); font-size: 11px">40</text>
+<text x="{{c.gapMid}}" y="24" text-anchor="middle" style="fill: var(--t3); font-size: 11px">no data</text>
+<path d="{{c.line}}" style="fill: none; stroke: var(--vitals); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.9"></path>
+<path d="{{c.dots}}" style="fill: var(--vitals)"></path>
+<circle cx="{{c.tagX}}" cy="{{c.tagY}}" r="6" style="fill: none; stroke: var(--t2); stroke-width: 1.5"></circle>
+<text x="{{c.tagX}}" y="{{c.tagLabelY}}" text-anchor="middle" style="fill: var(--t2); font-size: 11px; font-weight: 600">Alcohol</text>
+<circle cx="{{c.todayX}}" cy="{{c.todayY}}" r="11" style="fill: var(--vitals); opacity: 0.18"></circle>
+<circle cx="{{c.todayX}}" cy="{{c.todayY}}" r="5.5" style="fill: var(--vitals); stroke: var(--surface); stroke-width: 2.5"></circle>
+<text x="{{c.todayLabelX}}" y="{{c.todayLabelY}}" text-anchor="end" style="fill: var(--t1); font-size: 13px; font-weight: 700">58</text>
+</svg>
+<div style="position: relative; height: 16px; margin-top: 4px">
+<sc-for list="{{c.xlabels}}" as="x" hint-placeholder-count="5">
+<span style="position: absolute; left: {{x.left}}; transform: {{x.tf}}; font-size: 11px; color: {{x.color}}; white-space: nowrap">{{x.t}}</span>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--t3)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: var(--band)"></span>Usual 44–54</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 2px; border-radius: 1px; background: var(--vitals)"></span>Nightly</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; box-sizing: border-box; border-radius: 5px; border: 1.5px solid var(--t2)"></span>Your tag</span>
+</div>
+<p style="margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 17px; line-height: 1.45; color: var(--t1)">Your highest 30-day average since May. <span style="color: var(--t2)">The dip on 18 September followed an evening you tagged Alcohol.</span></p>
+</section>
+
+<section aria-label="Also this month" style="display: flex; flex-direction: column; gap: 12px">
+<span class="cap">Also this month</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{tiles}}" as="t" hint-placeholder-count="4">
+<div style="padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; color: var(--t2)">{{t.name}}</span>
+<span style="display: flex; align-items: baseline; gap: 4px"><span class="n" style="font-size: 32px">{{t.value}}</span><span style="font-size: 13px; color: var(--t3)">{{t.unit}}</span></span>
+<svg width="100%" height="40" viewBox="0 0 140 40" preserveAspectRatio="none" aria-hidden="true">
+<rect x="0" y="{{t.bandY}}" width="140" height="{{t.bandH}}" style="fill: var(--band)"></rect>
+<path d="{{t.line}}" vector-effect="non-scaling-stroke" style="fill: none; stroke: {{t.color}}; stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round"></path>
+</svg>
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--t3)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.glyph}}"></path></svg>{{t.delta}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-label="Last 7 days against the 7 before" style="display: flex; flex-direction: column; gap: 12px">
+<span class="cap">Last 7 days vs the 7 before</span>
+<div style="border-radius: 22px; background: var(--surface); border: 1px solid var(--line); padding: 4px 18px">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--t3)">
+<span></span><span style="text-align: right">Last 7</span><span style="text-align: right">Before</span>
+</div>
+<sc-for list="{{compare}}" as="r" hint-placeholder-count="5">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 8px; align-items: baseline; padding: 12px 0; border-top: {{r.sep}}">
+<span style="font-size: 15px; color: var(--t2)">{{r.name}}</span>
+<span class="n" style="text-align: right; font-size: 22px; color: var(--t1)">{{r.now}}</span>
+<span class="n" style="text-align: right; font-size: 22px; color: var(--t3)">{{r.before}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<nav aria-label="Tabs" style="position: absolute; left: 16px; right: 16px; bottom: 28px; height: 64px; box-sizing: border-box; padding: 6px; border-radius: 32px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5); border: 1px solid var(--line2); box-shadow: 0 12px 32px var(--shadow); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<a href="{{t.href}}" aria-current="{{t.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 26px; background: {{t.bg}}; color: {{t.color}}; font-size: 11px; font-weight: 600; text-decoration: none">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"></path></svg>
+<span>{{t.label}}</span>
+</a>
+</sc-for>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":1480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const sel = st.range || '30D';
+    const ranges = ['7D', '30D', '90D', '1Y'].map((l) => ({
+      label: l,
+      pressed: l === sel ? 'true' : 'false',
+      bg: l === sel ? 'var(--surface)' : 'transparent',
+      fg: l === sel ? 'var(--t1)' : 'var(--t2)',
+      sh: l === sel ? '0 1px 2px var(--shadow)' : 'none',
+      pick: () => this.setState({ range: l })
+    }));
+    const metrics = ['HRV', 'Resting HR', 'Sleep', 'Load', 'Steps', 'Weight'].map((l, i) => ({
+      label: l,
+      pressed: i === 0 ? 'true' : 'false',
+      bg: i === 0 ? 'var(--act)' : 'transparent',
+      fg: i === 0 ? 'var(--actink)' : 'var(--t1)',
+      bd: i === 0 ? 'var(--act)' : 'var(--line2)'
+    }));
+
+    // HRV chart: 30 nights, usual 44–54, scale 36–64
+    const hrv = [47, 50, 48, 52, 49, 45, null, null, 50, 53, 51, 41, 46, 50, 52, 55, 53, 51, 54, 56, 53, 55, 52, 57, 54, 56, 55, 53, 56, 58];
+    const PW = 290, top = 8, H = 166, lo = 36, hi = 64;
+    const x = (i) => 4 + i * (PW - 8) / 29;
+    const y = (v) => top + (hi - v) / (hi - lo) * H;
+    const f = (n) => n.toFixed(1);
+    let line = '', pen = false, dots = '';
+    const dot = (cx, cy, r) => 'M' + f(cx - r) + ' ' + f(cy) + 'a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0Z';
+    hrv.forEach((v, i) => {
+      if (v === null) { pen = false; return; }
+      line += (pen ? 'L' : 'M') + f(x(i)) + ' ' + f(y(v)) + ' ';
+      pen = true;
+      if (i !== 29 && i !== 11) dots += dot(x(i), y(v), 2.2);
+    });
+    const grid = [40, 50, 60].map((g) => 'M0 ' + f(y(g)) + 'H296').join('');
+    const days = ['7 Sep', '14 Sep', '21 Sep', '28 Sep', '6 Oct'];
+    const idx = [0, 7, 14, 21, 29];
+    const xlabels = days.map((t, k) => ({
+      t,
+      left: f(x(idx[k])) + 'px',
+      tf: k === 0 ? 'none' : (k === 4 ? 'translateX(-80%)' : 'translateX(-50%)'),
+      color: k === 4 ? 'var(--t1)' : 'var(--t3)'
+    }));
+    const c = {
+      bandY: f(y(54)), bandH: f(y(44) - y(54)),
+      gapX: f(x(6) - 6), gapW: f(x(7) - x(6) + 12), gapMid: f((x(6) + x(7)) / 2),
+      grid, line, dots,
+      l60: f(y(60) + 4), l50: f(y(50) + 4), l40: f(y(40) + 4),
+      tagX: f(x(11)), tagY: f(y(41)), tagLabelY: f(y(41) + 22),
+      todayX: f(x(29)), todayY: f(y(58)), todayLabelX: f(x(29) - 12), todayLabelY: f(y(58) - 10),
+      xlabels
+    };
+
+    const spark = (vals, bandLo, bandHi, min, max) => {
+      const n = vals.length;
+      const sx = (i) => 2 + i * 136 / (n - 1);
+      const sy = (v) => 3 + (max - v) / (max - min) * 34;
+      let p = '', down = false;
+      vals.forEach((v, i) => {
+        if (v === null) { down = false; return; }
+        p += (down ? 'L' : 'M') + f(sx(i)) + ' ' + f(sy(v)) + ' ';
+        down = true;
+      });
+      return { line: p, bandY: f(sy(bandHi)), bandH: f(sy(bandLo) - sy(bandHi)) };
+    };
+    const UP = 'M6 14l6-6 6 6', FLAT = 'M5 12h14', DOWN = 'M6 10l6 6 6-6';
+    const tiles = [
+      { name: 'Resting heart rate', value: '53', unit: 'bpm', color: 'var(--vitals)', glyph: DOWN, delta: '1 bpm vs before',
+        ...spark([55, 54, 55, 53, 54, 56, null, null, 54, 53, 54, 58, 56, 54, 53, 52, 53, 54, 52, 52, 53, 52, 53, 51, 52, 52, 53, 52, 52, 52], 51, 56, 48, 60) },
+      { name: 'Sleep', value: '7h 08m', unit: 'avg', color: 'var(--sleep)', glyph: UP, delta: '18 min vs before',
+        ...spark([402, 431, 415, 447, 398, 452, null, null, 420, 436, 445, 371, 409, 433, 428, 455, 441, 437, 429, 450, 418, 446, 432, 458, 439, 425, 449, 440, 447, 462], 410, 450, 340, 500) },
+      { name: 'Weekly load', value: '2,580', unit: 'avg', color: 'var(--load)', glyph: FLAT, delta: 'Within your usual',
+        ...spark([2310, 2550, 2420, 2700, 2600, 2840, 2710, 2480], 2300, 2800, 2000, 3000) },
+      { name: 'Steps', value: '8,120', unit: '/day', color: 'var(--load)', glyph: UP, delta: '640 vs before',
+        ...spark([7400, 9100, 8300, 6200, 8800, 10400, 5100, 7900, 8600, 9300, 7200, 8100, 8800, 6900, 7600, 9900, 8400, 7700, 8200, 9000, 6600, 8500, 7900, 10100, 8300, 7500, 8700, 6400, 8900, 6412], 7000, 9500, 4000, 11000) }
+    ];
+    const compare = [
+      { name: 'Readiness', now: '76', before: '71' },
+      { name: 'HRV', now: '55 ms', before: '51 ms' },
+      { name: 'Resting HR', now: '52 bpm', before: '54 bpm' },
+      { name: 'Sleep', now: '7h 14m', before: '6h 58m' },
+      { name: 'Steps', now: '7,980', before: '7,240' }
+    ].map((r, i) => ({ ...r, sep: i === 0 ? '0' : '1px solid var(--line)' }));
+
+    const IC = {
+      Today: 'M3 17h18M7 17a5 5 0 0 1 10 0M12 6v3M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8',
+      Trends: 'M3 20h18M4 15l5-5 4 3 7-7',
+      Sleep: 'M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z',
+      Body: 'M12 3.5a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4ZM6.5 10.5h11M12 10.5v4.5M12 15l-3 5.5M12 15l3 5.5',
+      Ask: 'M4.5 5.5h15v10h-8.5l-4 3.5v-3.5h-2.5Z'
+    };
+    const files = { Today: 'Main.dc.html', Trends: 'Trends.dc.html', Sleep: 'Sleep.dc.html', Body: 'Body.dc.html', Ask: 'Ask.dc.html' };
+    const ACTIVE = 'Trends';
+    const tabs = Object.keys(IC).map((k) => ({ label: k, href: files[k], icon: IC[k], color: k === ACTIVE ? 'var(--t1)' : 'var(--t3)', bg: k === ACTIVE ? 'var(--line)' : 'transparent', current: k === ACTIVE ? 'page' : 'false' }));
+    return { theme: this.props.theme ?? 'dark', ranges, metrics, c, tiles, compare, tabs };
+  }
+}
+</script>
+</body>
+</html>
