@@ -11,7 +11,16 @@ struct ChatBlockView: View {
 
     var units: UnitSystem { app.profile.units }
 
+    @ViewBuilder
     var body: some View {
+        if case .bodyNoteProposal(let note) = block {
+            BodyNoteProposalCard(proposal: note, open: open)
+        } else {
+            linkedCard
+        }
+    }
+
+    var linkedCard: some View {
         Button {
             if let link = block.link { open(link) }
         } label: {
@@ -206,6 +215,8 @@ struct ChatBlockView: View {
                 Text("Happened \(Fmt.dayLabel(n.date)) · written \(n.createdAt.formatted(date: .abbreviated, time: .omitted))\(n.resolvedDate.map { " · resolved \(Fmt.shortDate($0))" } ?? "")")
                     .font(Typo.geist(12, relativeTo: .caption)).foregroundStyle(Palette.secondaryInk)
             }
+        case .bodyNoteProposal:
+            EmptyView()
         case .sources(let b):
             VStack(alignment: .leading, spacing: Space.s) {
                 header("Sources · \(b.metric.displayName)", symbol: "square.stack.3d.up")
@@ -253,5 +264,82 @@ struct ChatBlockView: View {
             Text(label).font(Typo.geist(12, relativeTo: .caption)).foregroundStyle(Palette.secondaryInk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A body note Ask prepared from what the person said. Nothing is saved until they tap Add note;
+/// Edit opens the same editor as the Body tab. Once saved (same id) the card says so and links to the body map.
+struct BodyNoteProposalCard: View {
+    let proposal: HealthEvent
+    let open: (DeepLink) -> Void
+    @Environment(AppModel.self) private var app
+    @State private var editing: HealthEvent?
+    @State private var saving = false
+
+    var saved: HealthEvent? { app.history?.events.first { $0.id == proposal.id } }
+
+    var body: some View {
+        let note = saved ?? proposal
+        VStack(alignment: .leading, spacing: Space.m) {
+            Eyebrow(text: saved == nil ? "Add a body note?" : "Body note added", icon: "bl.bodynote", color: Palette.note)
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text(note.title)
+                    .font(Typo.geist(17, .semibold, relativeTo: .headline))
+                    .foregroundStyle(Palette.ink)
+                if let text = note.note, !text.isEmpty {
+                    Text(text).font(Typo.geist(15, relativeTo: .subheadline)).foregroundStyle(Palette.secondaryInk)
+                }
+                Text(details(note))
+                    .font(Typo.geist(12, relativeTo: .caption))
+                    .foregroundStyle(Palette.secondaryInk)
+            }
+            if saved == nil {
+                Text("Blith can't assess injuries or pain. If it gets worse or doesn't ease, see a clinician.")
+                    .font(Typo.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: Space.m) {
+                    Button("Edit") { editing = proposal }
+                        .buttonStyle(.bordered)
+                    Button("Add note") { add(proposal) }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Palette.note)
+                        .disabled(saving)
+                }
+            } else {
+                Button { open(.body(proposal.id)) } label: {
+                    HStack(spacing: Space.xs) {
+                        Text("Open on the body map").font(Typo.geist(12, .semibold, relativeTo: .caption))
+                        Image(systemName: "chevron.right").font(.caption2.weight(.bold))
+                    }
+                    .foregroundStyle(Palette.note)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .card(padding: Space.l, tone: .tinted(Palette.note))
+        .sheet(item: $editing) { draft in
+            BodyNoteEditor(note: draft, isNew: true) { edited in
+                add(edited)
+            } onDelete: { _ in }
+        }
+    }
+
+    func details(_ note: HealthEvent) -> String {
+        var parts = [note.bodyRegion?.displayName ?? "General", note.kindLabel, "Happened \(Fmt.dayLabel(note.date))"]
+        if let resolved = note.resolvedDate { parts.append("resolved \(Fmt.shortDate(resolved))") }
+        return parts.joined(separator: " · ")
+    }
+
+    func add(_ note: HealthEvent) {
+        guard !saving, saved == nil else { return }
+        saving = true
+        var n = note
+        n.createdAt = AppClock.now()
+        let toSave = n
+        Task {
+            await app.saveNote(toSave)
+            saving = false
+        }
     }
 }

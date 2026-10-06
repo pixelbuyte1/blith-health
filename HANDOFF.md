@@ -190,6 +190,10 @@ marked, title, date, **Edit** and **Add note**. Nothing is saved until the perso
 existing body-note store. Show the safety line ("Blith can't assess injuries…"). Existing `body_note` card shows saved
 notes ("Show my body notes").
 
+*Status (Oct 2026):* A is built in its own PR: `propose_body_note`, the `bodyNoteProposal` card (Edit reuses
+`BodyNoteEditor`, Add note calls `AppModel.saveNote`), and on-device parsing in `LocalAssistant` (`BodyRegion.match`).
+Not yet: the mini body figure on the card, and chips for the side (Ask asks in words).
+
 **B. "I walked 2 miles today outdoors between 4:30 and 5:20" → workout.** New tool `propose_activity` returning a
 proposal: `kind` (walk/run/hike/cycle…), `start`, `end` (parsed in app code from the person's words in local time),
 `distance` (mi or km per units), derived duration and pace, `indoor/outdoor`. Block `activityProposal` with **Edit**
