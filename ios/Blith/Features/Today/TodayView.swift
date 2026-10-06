@@ -58,6 +58,8 @@ struct TodayView: View {
                 }
                 .padding(.horizontal, Space.page)
                 .padding(.bottom, Space.section)
+                // Pin the page to the screen width so it can't slide sideways while scrolling.
+                .containerRelativeFrame(.horizontal)
                 .scrollTargetLayout()
             }
             .scrollPosition(id: $scrollTarget, anchor: .top)

@@ -269,7 +269,7 @@ final class BodySceneController: NSObject {
             #pragma body
             \(fresnel)
             _output.color.rgb += float3(0.725, 0.855, 1.0) * f * 1.15;
-            _output.color.rgb += float3(0.49, 0.70, 1.0) * highlight * (0.22 + 0.9 * f);
+            _output.color.rgb += float3(0.49, 0.70, 1.0) * highlight * (0.08 + 0.32 * f);
             """,
         ]
         return m
@@ -301,7 +301,7 @@ final class BodySceneController: NSObject {
             #pragma body
             \(fresnel)
             _output.color.rgb += float3(1.0, 0.42, 0.36) * f * 0.16;
-            _output.color.rgb += (_output.color.rgb * 0.7 + float3(0.49, 0.70, 1.0) * f * 0.8) * highlight;
+            _output.color.rgb += (_output.color.rgb * 0.22 + float3(0.49, 0.70, 1.0) * f * 0.35) * highlight;
             """,
         ]
         return m
@@ -347,12 +347,17 @@ final class BodySceneController: NSObject {
             rimLight.intensity = 500
             rimLight.color = UIColor(hex: 0x3DDCFF)
             cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = 0
+            cameraNode.camera?.bloomIntensity = 0.55
+            cameraNode.camera?.bloomThreshold = 0.6
         } else {
             ambientLight.intensity = 300
             ambientLight.color = UIColor(hex: 0xFFE9E4)
             rimLight.intensity = 380
             rimLight.color = UIColor(hex: 0xFFC2B8)
             cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = 0.9
+            // Less bloom on the muscles: no red halo around the figure.
+            cameraNode.camera?.bloomIntensity = 0.2
+            cameraNode.camera?.bloomThreshold = 0.85
         }
     }
 
