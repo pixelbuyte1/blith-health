@@ -166,7 +166,7 @@ enum AnatomyStyle: String, CaseIterable, Identifiable {
     var title: String { self == .radiant ? "Soft radiant" : "Minimal glow" }
     /// The shader's `detail` value: 1 keeps muscle borders and tone variation, 0 flattens them.
     var detail: Float { self == .radiant ? 1 : 0 }
-    var occlusion: CGFloat { self == .radiant ? 0.5 : 0.28 }
+    var occlusion: CGFloat { self == .radiant ? 0.6 : 0.28 }
 }
 
 /// The dark imaging chamber the figure stands in (the documented hex exception, like the lighting).
@@ -327,9 +327,9 @@ final class BodySceneController: NSObject {
 
     /// Warm ivory resin rather than exposed tissue; tendons a touch paler, the underlayer (seen only
     /// in the gaps between muscles) a touch deeper.
-    static let ivory = UIColor(hex: 0xE2C8B7)
+    static let ivory = UIColor(hex: 0xDCBDA9)
     static let tendon = UIColor(hex: 0xE8DCD1)
-    static let underlayer = UIColor(hex: 0xC4A897)
+    static let underlayer = UIColor(hex: 0xBC9C89)
 
     /// A stable value in -1...1 per muscle name, so neighbouring muscles differ by a few percent of tone.
     static func variation(for muscle: Body3DModel.Muscle) -> Float {
@@ -356,7 +356,7 @@ final class BodySceneController: NSObject {
     float3 srV = normalize(-_surface.position);
     float srNdv = saturate(dot(srN, srV));
     float srF = pow(1.0 - srNdv, 2.4);
-    float3 srCol = mix(_output.color.rgb, _surface.diffuse.rgb * (0.78 + 0.22 * srNdv), (0.56 - 0.16 * detail));
+    float3 srCol = mix(_output.color.rgb, _surface.diffuse.rgb * (0.78 + 0.22 * srNdv), (0.56 - 0.24 * detail));
     srCol *= 1.0 + vary * (0.012 + 0.038 * detail);
     srCol += float3(0.30, 0.16, 0.10) * pow(1.0 - srNdv, 1.5) * 0.12;
     srCol += float3(0.62, 0.76, 1.0) * srF * (0.10 + 0.06 * detail);
@@ -452,7 +452,7 @@ final class BodySceneController: NSObject {
         } else {
             // Even, soft light so the anatomy reads as frosted resin. Bloom is nearly off: only the
             // selected muscle's edge catches a little of it.
-            ambientLight.intensity = 430
+            ambientLight.intensity = 340
             ambientLight.color = UIColor(hex: 0xFFF1E8)
             rimLight.intensity = 460
             rimLight.color = UIColor(hex: 0xCFE0FF)
