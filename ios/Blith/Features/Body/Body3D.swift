@@ -262,7 +262,7 @@ final class BodySceneController: NSObject {
             return Self.anatomyMaterial(base: muscle.kind == "tendon" ? Self.tendon : Self.ivory, vary: Self.variation(for: muscle))
         }
         muscleState = Array(repeating: MaterialState(), count: muscleMaterials.count)
-        headMaterial = Self.anatomyMaterial(base: Self.headTone, vary: 0)
+        headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
         shellMaterials = shellRegions.map { _ in Self.shellMaterial(opacity: style.shellOpacity) }
         shellNode.geometry?.materials = shellMaterials
         skinNode.geometry?.materials = skinMaterials
@@ -333,7 +333,7 @@ final class BodySceneController: NSObject {
             #pragma body
             \(fresnel)
             _output.color.rgb += float3(0.725, 0.855, 1.0) * f * 1.15;
-            _output.color.rgb += float3(0.49, 0.70, 1.0) * highlight * (0.22 + 0.9 * f);
+            _output.color.rgb += float3(0.49, 0.70, 1.0) * highlight * (0.08 + 0.32 * f);
             """,
         ]
         return m
@@ -346,9 +346,8 @@ final class BodySceneController: NSObject {
     static let ivory = UIColor(hex: 0xD99A7E)
     static let tendon = UIColor(hex: 0xE3B9A4)
     static let underlayer = UIColor(hex: 0xA86A55)
-    /// The translucent skin, and the opaque head tinted to match skin seen over muscle.
+    /// The translucent skin (it also covers the opaque head, which sits just inside it).
     static let skinTone = UIColor(hex: 0xF1C7AF)
-    static let headTone = UIColor(hex: 0xE3AD93)
 
     /// A stable value in -1...1 per muscle name, so neighbouring muscles differ by a few percent of tone.
     static func variation(for muscle: Body3DModel.Muscle) -> Float {
@@ -421,7 +420,7 @@ final class BodySceneController: NSObject {
             .filter { model.skin.groups[$0].region == head && $0 < source.elements.count }
             .map { source.elements[$0] }
         guard !elements.isEmpty else { return nil }
-        return SCNGeometry(sources: inflatedSources(source, offsets: skinOffsets(model)), elements: elements)
+        return SCNGeometry(sources: inflatedSources(source, offsets: skinOffsets(model).map { $0 - 0.005 }), elements: elements)
     }
 
     /// How far the skin is pushed out along its normals on the muscle layer: some muscles sit a little
@@ -498,11 +497,10 @@ final class BodySceneController: NSObject {
         return [inflated, nrm]
     }
 
-    /// The skin minus the head (the head is drawn opaque by `headNode`), and each element's region.
+    /// The whole skin as the shell (over the opaque head too), and each element's region.
     static func shellGeometry(_ model: Body3DModel) -> (geometry: SCNGeometry?, regions: [Int]) {
-        let head = model.regionIndex(.head)
         let source = model.skin.geometry
-        let indices = model.skin.groups.indices.filter { model.skin.groups[$0].region != head && $0 < source.elements.count }
+        let indices = model.skin.groups.indices.filter { $0 < source.elements.count }
         guard !indices.isEmpty else { return (nil, []) }
         return (SCNGeometry(sources: inflatedSources(source, offsets: skinOffsets(model)), elements: indices.map { source.elements[$0] }),
                 indices.map { model.skin.groups[$0].region })
@@ -519,7 +517,7 @@ final class BodySceneController: NSObject {
     float3 shN = normalize(_surface.normal);
     float3 shV = normalize(-_surface.position);
     float shF = pow(1.0 - saturate(dot(shN, shV)), 3.0);
-    float3 shCol = _output.color.rgb + float3(1.0, 0.86, 0.78) * shF * 0.55;
+    float3 shCol = _output.color.rgb + float3(1.0, 0.76, 0.62) * shF * 0.16;
     shCol = mix(shCol, shCol * 0.72, dim);
     shCol += float3(0.10, 0.26, 1.0) * highlight * (0.10 + 0.25 * shF);
     _output.color.rgb = shCol;
@@ -604,8 +602,8 @@ final class BodySceneController: NSObject {
             rimLight.intensity = 600
             rimLight.color = UIColor(hex: 0xCFE0FF)
             camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion
-            camera?.bloomIntensity = 0.18
-            camera?.bloomThreshold = 0.92
+            camera?.bloomIntensity = 0
+            camera?.bloomThreshold = 1
         }
     }
 
