@@ -169,7 +169,7 @@ enum AnatomyStyle: String, CaseIterable, Identifiable {
     var occlusion: CGFloat { self == .radiant ? 0.6 : 0.3 }
     /// How much of the skin shell covers the muscles: Soft radiant lets the anatomy show through,
     /// Minimal glow keeps the body smoother.
-    var shellOpacity: CGFloat { self == .radiant ? 0.42 : 0.68 }
+    var shellOpacity: CGFloat { self == .radiant ? 0.34 : 0.62 }
 }
 
 /// The dark imaging chamber the figure stands in (the documented hex exception, like the lighting).
@@ -421,16 +421,60 @@ final class BodySceneController: NSObject {
             .filter { model.skin.groups[$0].region == head && $0 < source.elements.count }
             .map { source.elements[$0] }
         guard !elements.isEmpty else { return nil }
-        return SCNGeometry(sources: inflatedSources(source), elements: elements)
+        return SCNGeometry(sources: inflatedSources(source, offsets: skinOffsets(model)), elements: elements)
     }
 
     /// How far the skin is pushed out along its normals on the muscle layer: some muscles sit a little
     /// outside the scanned skin (99.9% within 1.6 cm), and would otherwise poke through the shell in
-    /// patches. Invisible at body scale.
+    /// patches. The head (no muscles drawn under it), hands and feet stay close so the face and
+    /// fingers keep their shape; the offset is blended across a few rings of vertices so no ridge forms.
     static let skinOffset: Float = 0.016
+    static let closeOffsets: [BodyRegion: Float] = [.head: 0.002, .rightHand: 0.003, .leftHand: 0.003,
+                                                     .rightFoot: 0.004, .leftFoot: 0.004]
 
-    /// The geometry's sources with every vertex moved `skinOffset` along its normal (computed once).
-    static func inflatedSources(_ geometry: SCNGeometry) -> [SCNGeometrySource] {
+    /// Per-vertex offset for the skin layer, computed once and shared by the shell and the head.
+    static let offsetCache = OffsetCache()
+    final class OffsetCache { var value: [Float]? }
+
+    static func skinOffsets(_ model: Body3DModel) -> [Float] {
+        if let cached = offsetCache.value { return cached }
+        let geometry = model.skin.geometry
+        let count = geometry.sources(for: .vertex).first?.vectorCount ?? 0
+        var out = [Float](repeating: skinOffset, count: count)
+        var triangles: [Int] = []
+        for (i, group) in model.skin.groups.enumerated() where i < geometry.elements.count {
+            let element = geometry.elements[i]
+            guard element.bytesPerIndex == 4 else { continue }
+            var indices: [Int] = []
+            element.data.withUnsafeBytes { raw in
+                for k in 0..<min(element.primitiveCount * 3, raw.count / 4) {
+                    let v = Int(raw.loadUnaligned(fromByteOffset: k * 4, as: UInt32.self))
+                    if v < count { indices.append(v) }
+                }
+            }
+            if indices.count % 3 == 0 { triangles += indices }
+            guard model.meta.regions.indices.contains(group.region),
+                  let region = BodyRegion(rawValue: model.meta.regions[group.region].id),
+                  let close = closeOffsets[region] else { continue }
+            for v in indices { out[v] = min(out[v], close) }
+        }
+        for _ in 0..<8 {
+            var sum = [Float](repeating: 0, count: count)
+            var weight = [Float](repeating: 0, count: count)
+            for t in stride(from: 0, to: triangles.count - 2, by: 3) {
+                let a = triangles[t], b = triangles[t + 1], c = triangles[t + 2]
+                let total = out[a] + out[b] + out[c]
+                sum[a] += total; sum[b] += total; sum[c] += total
+                weight[a] += 3; weight[b] += 3; weight[c] += 3
+            }
+            for v in 0..<count where weight[v] > 0 { out[v] = sum[v] / weight[v] }
+        }
+        offsetCache.value = out
+        return out
+    }
+
+    /// The geometry's sources with every vertex moved along its normal by its offset (computed once).
+    static func inflatedSources(_ geometry: SCNGeometry, offsets: [Float]) -> [SCNGeometrySource] {
         guard let pos = geometry.sources(for: .vertex).first, let nrm = geometry.sources(for: .normal).first,
               pos.vectorCount == nrm.vectorCount, pos.usesFloatComponents, nrm.usesFloatComponents,
               pos.bytesPerComponent == 4, nrm.bytesPerComponent == 4,
@@ -443,7 +487,7 @@ final class BodySceneController: NSObject {
                     for k in 0..<3 {
                         let a = p.loadUnaligned(fromByteOffset: pos.dataOffset + i * pos.dataStride + k * 4, as: Float.self)
                         let b = q.loadUnaligned(fromByteOffset: nrm.dataOffset + i * nrm.dataStride + k * 4, as: Float.self)
-                        out[i * 3 + k] = a + b * skinOffset
+                        out[i * 3 + k] = a + b * (i < offsets.count ? offsets[i] : skinOffset)
                     }
                 }
             }
@@ -460,7 +504,7 @@ final class BodySceneController: NSObject {
         let source = model.skin.geometry
         let indices = model.skin.groups.indices.filter { model.skin.groups[$0].region != head && $0 < source.elements.count }
         guard !indices.isEmpty else { return (nil, []) }
-        return (SCNGeometry(sources: inflatedSources(source), elements: indices.map { source.elements[$0] }),
+        return (SCNGeometry(sources: inflatedSources(source, offsets: skinOffsets(model)), elements: indices.map { source.elements[$0] }),
                 indices.map { model.skin.groups[$0].region })
     }
 
