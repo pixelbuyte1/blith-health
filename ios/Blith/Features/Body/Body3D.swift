@@ -421,7 +421,37 @@ final class BodySceneController: NSObject {
             .filter { model.skin.groups[$0].region == head && $0 < source.elements.count }
             .map { source.elements[$0] }
         guard !elements.isEmpty else { return nil }
-        return SCNGeometry(sources: source.sources, elements: elements)
+        return SCNGeometry(sources: inflatedSources(source), elements: elements)
+    }
+
+    /// How far the skin is pushed out along its normals on the muscle layer: some muscles sit a little
+    /// outside the scanned skin (99.9% within 1.6 cm), and would otherwise poke through the shell in
+    /// patches. Invisible at body scale.
+    static let skinOffset: Float = 0.016
+
+    /// The geometry's sources with every vertex moved `skinOffset` along its normal (computed once).
+    static func inflatedSources(_ geometry: SCNGeometry) -> [SCNGeometrySource] {
+        guard let pos = geometry.sources(for: .vertex).first, let nrm = geometry.sources(for: .normal).first,
+              pos.vectorCount == nrm.vectorCount, pos.usesFloatComponents, nrm.usesFloatComponents,
+              pos.bytesPerComponent == 4, nrm.bytesPerComponent == 4,
+              pos.componentsPerVector == 3, nrm.componentsPerVector == 3 else { return geometry.sources }
+        let n = pos.vectorCount
+        var out = [Float](repeating: 0, count: n * 3)
+        pos.data.withUnsafeBytes { p in
+            nrm.data.withUnsafeBytes { q in
+                for i in 0..<n {
+                    for k in 0..<3 {
+                        let a = p.loadUnaligned(fromByteOffset: pos.dataOffset + i * pos.dataStride + k * 4, as: Float.self)
+                        let b = q.loadUnaligned(fromByteOffset: nrm.dataOffset + i * nrm.dataStride + k * 4, as: Float.self)
+                        out[i * 3 + k] = a + b * skinOffset
+                    }
+                }
+            }
+        }
+        let data = out.withUnsafeBufferPointer { Data(buffer: $0) }
+        let inflated = SCNGeometrySource(data: data, semantic: .vertex, vectorCount: n, usesFloatComponents: true,
+                                         componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
+        return [inflated, nrm]
     }
 
     /// The skin minus the head (the head is drawn opaque by `headNode`), and each element's region.
@@ -430,7 +460,7 @@ final class BodySceneController: NSObject {
         let source = model.skin.geometry
         let indices = model.skin.groups.indices.filter { model.skin.groups[$0].region != head && $0 < source.elements.count }
         guard !indices.isEmpty else { return (nil, []) }
-        return (SCNGeometry(sources: source.sources, elements: indices.map { source.elements[$0] }),
+        return (SCNGeometry(sources: inflatedSources(source), elements: indices.map { source.elements[$0] }),
                 indices.map { model.skin.groups[$0].region })
     }
 
