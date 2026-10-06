@@ -45,6 +45,10 @@ cd ios && xcodegen generate                     # only on a Mac
    extracted from the app; it needs a server proxy.
 7. Token economy: read only the lines you need, avoid screenshots and extra agents unless asked, and keep PR
    check-ins to one cheap status call every 6 hours.
+8. Codemagic minutes are limited. Agents use only `ios-ci`, once per push that needs it, and only to verify code.
+   Never start `ios-release-check`, `ios-setup` or `ios-release` (the founder starts releases and publishes to
+   TestFlight). Never run CI just to get screenshots or a look at a design: show how a screen will look with a
+   design mockup artifact (HTML) instead. Batch fixes into one push so a PR costs as few builds as possible.
 
 ## Builds and CI minutes
 
