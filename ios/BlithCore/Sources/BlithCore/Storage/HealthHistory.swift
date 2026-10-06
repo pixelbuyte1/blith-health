@@ -52,6 +52,8 @@ public struct HealthHistory: Codable, Sendable {
     public var workouts: [WorkoutRecord]
     /// Per-source contribution over the recent window, per metric.
     public var sources: [HealthMetric: [SourceShare]]
+    /// When each companion app (Huawei Health) last wrote to Apple Health, keyed by `CompanionApp.rawValue`.
+    public var sourceRecency: [String: SourceRecency]
     public var requestedCategories: Set<HealthCategory>
     public var unsupportedMetrics: Set<HealthMetric>
     public var events: [HealthEvent]
@@ -66,6 +68,7 @@ public struct HealthHistory: Codable, Sendable {
         sleepNights = [:]
         workouts = []
         sources = [:]
+        sourceRecency = [:]
         requestedCategories = []
         unsupportedMetrics = []
         events = []
@@ -73,7 +76,7 @@ public struct HealthHistory: Codable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case origin, daily, hourlySteps, weights, bodyFat, sleepNights, workouts, sources
+        case origin, daily, hourlySteps, weights, bodyFat, sleepNights, workouts, sources, sourceRecency
         case requestedCategories, unsupportedMetrics, events, sync
     }
 
@@ -88,6 +91,7 @@ public struct HealthHistory: Codable, Sendable {
         sleepNights = (try? c.decode([LocalDate: SleepNight].self, forKey: .sleepNights)) ?? [:]
         workouts = (try? c.decode([WorkoutRecord].self, forKey: .workouts)) ?? []
         sources = (try? c.decode([HealthMetric: [SourceShare]].self, forKey: .sources)) ?? [:]
+        sourceRecency = (try? c.decode([String: SourceRecency].self, forKey: .sourceRecency)) ?? [:]
         requestedCategories = (try? c.decode(Set<HealthCategory>.self, forKey: .requestedCategories)) ?? []
         unsupportedMetrics = (try? c.decode(Set<HealthMetric>.self, forKey: .unsupportedMetrics)) ?? []
         events = (try? c.decode([HealthEvent].self, forKey: .events)) ?? []

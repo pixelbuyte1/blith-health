@@ -44,13 +44,17 @@ public struct MockHealthProvider: HealthDataProvider {
     public let scenario: DemoScenario
     public let seed: UInt64
     public let now: @Sendable () -> Date
+    /// Screenshots only: pretend Huawei Health last wrote to Apple Health this long ago.
+    public let huaweiLag: TimeInterval?
     public var kind: ProviderKind { .demo }
     public var isAvailable: Bool { true }
 
-    public init(scenario: DemoScenario = .balanced, seed: UInt64 = 42, now: @escaping @Sendable () -> Date = { Date() }) {
+    public init(scenario: DemoScenario = .balanced, seed: UInt64 = 42, now: @escaping @Sendable () -> Date = { Date() },
+                huaweiLag: TimeInterval? = nil) {
         self.scenario = scenario
         self.seed = seed
         self.now = now
+        self.huaweiLag = huaweiLag
     }
 
     static let watch = SourceRef(provider: .demo, name: "Apple Watch", identifier: "com.apple.health.demo.watch", device: "Watch")
@@ -179,6 +183,14 @@ public struct MockHealthProvider: HealthDataProvider {
             batch.sources[.steps] = [SourceShare(source: Self.watch, value: (total * 0.64).rounded()),
                                      SourceShare(source: Self.phone, value: (total * 0.36).rounded())]
             if !batch.weights.isEmpty { batch.sources[.weight] = [SourceShare(source: Self.scale, value: Double(batch.weights.count))] }
+            if let huaweiLag {
+                let last = now().addingTimeInterval(-huaweiLag)
+                batch.sourceRecency[CompanionApp.huawei.rawValue] = SourceRecency(
+                    app: .huawei,
+                    latest: [.steps: last, .distanceWalkingRunning: last, .restingHeartRate: last.addingTimeInterval(-3600),
+                             .sleepDuration: last.addingTimeInterval(-8 * 3600)],
+                    checkedAt: now())
+            }
         }
         return batch
     }

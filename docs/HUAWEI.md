@@ -14,7 +14,23 @@
 - Many users don't need this path: the Huawei Health iOS app can sync a Huawei watch's steps,
   sleep and heart rate into Apple Health, which Blith already reads via HealthKit.
 
-## What exists in the code
+## Path 1: through Apple Health (live)
+
+Huawei Health (iOS) writes a Huawei watch's data into Apple Health, but only while the app runs,
+so data can lag by hours or days. Blith reads it through HealthKit like any other source and:
+
+- records the newest sample Huawei Health wrote per metric (`SourceRecency`, one source query
+  per metric in `AppleHealthProvider.companionRecency`);
+- shows a Today card when Huawei is behind (no data for 12 h) or not syncing (3 days), with
+  "Check again" and a link to Sources (`CompanionSync`, `CompanionSyncCard`);
+- lists in Sources what arrives, when it last arrived, what isn't arriving from any source, and
+  the steps to switch the Apple Health link on (`CompanionSyncSection`).
+
+Screenshots: `-BlithHuaweiLagHours 20` makes demo data show Huawei as 20 hours behind.
+
+## Path 2: direct from Huawei's cloud (waiting on Huawei)
+
+### What exists in the code
 
 - `HuaweiHealthProvider` (BlithCore) implements `HealthDataProvider`, maps Huawei data types
   (`com.huawei.continuous.steps.delta`, `…distance.delta`, `…calories.burnt`,
@@ -26,7 +42,7 @@
   Apple Health and directly (max per hour/day, near-duplicate readings kept once).
 - Tests cover the mapping and the merge (`HuaweiTests`).
 
-## To activate
+### To activate
 
 1. Complete the Huawei requirements above.
 2. Implement `HuaweiHealthProvider.Transport` against the REST API (sampling-data statistics

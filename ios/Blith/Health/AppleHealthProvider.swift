@@ -137,8 +137,47 @@ final class AppleHealthProvider: HealthDataProvider, @unchecked Sendable {
             }
             let weightSources = Dictionary(grouping: batch.weights, by: \.source).map { SourceShare(source: $0.key, value: Double($0.value.count)) }
             if !weightSources.isEmpty { batch.sources[.weight] = weightSources }
+            batch.sourceRecency = await companionRecency(predicate: sourcePredicate)
         }
         return batch
+    }
+
+    /// The newest sample each companion app (Huawei Health) wrote to Apple Health, per metric.
+    /// One source query per metric, then a single newest-sample query only when the app is present.
+    func companionRecency(predicate: NSPredicate) async -> [String: SourceRecency] {
+        var out: [String: SourceRecency] = [:]
+        let now = Date()
+        for app in CompanionApp.allCases {
+            var latest: [HealthMetric: Date] = [:]
+            for metric in app.watchMetrics {
+                let type: HKSampleType
+                if metric == .sleepDuration {
+                    type = HKCategoryType(.sleepAnalysis)
+                } else if let quantity = Self.quantityType(for: metric) {
+                    type = quantity
+                } else {
+                    continue
+                }
+                let sourceQuery = HKSourceQueryDescriptor(predicate: .sample(type: type, predicate: predicate))
+                guard let sources = try? await sourceQuery.result(for: store) else { continue }
+                let mine = sources.filter {
+                    CompanionApp.matching(SourceRef(provider: .appleHealth, name: $0.name, identifier: $0.bundleIdentifier)) == app
+                }
+                guard !mine.isEmpty else { continue }
+                let fromApp = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, HKQuery.predicateForObjects(from: Set(mine))])
+                let newest = HKSampleQueryDescriptor(
+                    predicates: [.sample(type: type, predicate: fromApp)],
+                    sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
+                    limit: 1)
+                if let sample = try? await newest.result(for: store).first {
+                    latest[metric] = sample.endDate
+                }
+            }
+            if !latest.isEmpty {
+                out[app.rawValue] = SourceRecency(app: app, latest: latest, checkedAt: now)
+            }
+        }
+        return out
     }
 
     // MARK: Queries

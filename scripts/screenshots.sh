@@ -73,6 +73,9 @@ for DEV in "$SMALL" "$LARGE"; do
     shoot "$UDID" "$NAME-16-newuser" -BlithDemo newUser -BlithClockHour 15.5 -BlithTab today
     shoot "$UDID" "$NAME-16b-nowatch" -BlithDemo partialPermissions -BlithClockHour 15.5 -BlithTab today
     shoot "$UDID" "$NAME-17-onboarding" -BlithResetOnboarding YES
+    shoot "$UDID" "$NAME-18-huawei-behind" "${DEMO[@]}" -BlithTab today -BlithHuaweiLagHours 20
+    shoot "$UDID" "$NAME-19-huawei-sources" "${DEMO[@]}" -BlithSheet sources -BlithHuaweiLagHours 20
+    shoot "$UDID" "$NAME-20-widgets" "${DEMO[@]}" -BlithSheet widgets
   fi
   # Light appearance: the same key screens, so both modes are checked every run.
   xcrun simctl ui "$UDID" appearance light

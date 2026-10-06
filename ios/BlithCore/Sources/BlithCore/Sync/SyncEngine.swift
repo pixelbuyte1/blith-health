@@ -154,6 +154,7 @@ public struct SyncEngine: Sendable {
         h.replaceSleep(in: span, with: SleepAssembler.nights(from: batch.sleepSegments, calendar: calendar))
         h.mergeWorkouts(batch.workouts, replacing: interval)
         if !batch.sources.isEmpty { h.sources = batch.sources }
+        h.sourceRecency.merge(batch.sourceRecency) { _, new in new }
         h.unsupportedMetrics = batch.unsupported
     }
 

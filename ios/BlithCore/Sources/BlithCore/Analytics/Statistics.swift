@@ -101,6 +101,21 @@ public enum Fmt {
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
 
+    /// "just now", "25 min ago", "14 hours ago", "3 days ago"
+    public static func ago(_ date: Date, now: Date) -> String {
+        let seconds = max(0, now.timeIntervalSince(date))
+        switch seconds {
+        case ..<60: return "just now"
+        case ..<3600: return "\(Int(seconds / 60)) min ago"
+        case ..<86_400:
+            let h = Int(seconds / 3600)
+            return h == 1 ? "1 hour ago" : "\(h) hours ago"
+        default:
+            let d = Int(seconds / 86_400)
+            return d == 1 ? "1 day ago" : "\(d) days ago"
+        }
+    }
+
     public static func distance(_ meters: Double, units: UnitSystem) -> String {
         switch units {
         case .metric: "\(decimal(meters / 1000)) km"

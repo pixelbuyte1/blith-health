@@ -154,6 +154,7 @@ struct ProfileView: View {
                 Button("Explore with sample data") { Task { await app.useDemo(.balanced) } }
             }
             NavigationLink("Sources and coverage") { SourcesView() }
+            NavigationLink("Widgets") { WidgetGalleryView() }
             HStack {
                 if let last = app.history?.sync.lastSync {
                     Text("Last updated \(last.formatted(date: .abbreviated, time: .shortened))").foregroundStyle(Palette.secondaryInk)
@@ -226,6 +227,7 @@ struct SourcesView: View {
                         }
                     }
                 }
+                CompanionSyncSection(app: .huawei, status: app.huaweiSync)
                 Section {
                     ForEach(HealthMetric.allCases, id: \.self) { metric in
                         let state = h.availability(metric, today: today, calendar: cal)

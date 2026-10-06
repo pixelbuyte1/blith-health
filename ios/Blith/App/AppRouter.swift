@@ -17,6 +17,7 @@ final class AppRouter {
         case sources
         case readiness(LocalDate?)
         case vital(HealthMetric)
+        case widgets
 
         var id: String {
             switch self {
@@ -27,6 +28,7 @@ final class AppRouter {
             case .sources: "sources"
             case .readiness(let d): "readiness-\(d?.description ?? "today")"
             case .vital(let m): "vital-\(m.rawValue)"
+            case .widgets: "widgets"
             }
         }
     }

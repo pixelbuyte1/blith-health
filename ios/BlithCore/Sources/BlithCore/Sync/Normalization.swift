@@ -77,6 +77,7 @@ public enum SourceMerger {
         out.workouts = dedupeWorkouts(batches.flatMap(\.workouts))
         for b in batches {
             for (metric, shares) in b.sources { out.sources[metric, default: []].append(contentsOf: shares) }
+            out.sourceRecency.merge(b.sourceRecency) { a, b in (a.lastSeen ?? .distantPast) >= (b.lastSeen ?? .distantPast) ? a : b }
         }
         out.unsupported = batches.map(\.unsupported).reduce(Set(HealthMetric.allCases)) { $0.intersection($1) }
         return out

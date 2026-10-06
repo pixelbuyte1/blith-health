@@ -40,6 +40,8 @@ public struct ProviderBatch: Sendable {
     public var sleepSegments: [SleepSegment] = []
     public var workouts: [WorkoutRecord] = []
     public var sources: [HealthMetric: [SourceShare]] = [:]
+    /// Companion apps seen in the source window and their latest sample per metric.
+    public var sourceRecency: [String: SourceRecency] = [:]
     /// Metrics this provider cannot supply on this device.
     public var unsupported: Set<HealthMetric> = []
 

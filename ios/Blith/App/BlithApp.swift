@@ -105,6 +105,8 @@ struct SheetHost: View {
             WeightDetailView()
         case .sources:
             NavigationStack { SourcesView() }
+        case .widgets:
+            NavigationStack { WidgetGalleryView() }
         case .readiness(let date):
             ReadinessDetailView(date: date)
         case .vital(let metric):

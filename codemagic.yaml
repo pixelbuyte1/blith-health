@@ -258,6 +258,19 @@ workflows:
           TEAM=$(app-store-connect bundle-ids list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json \
             | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["attributes"]["seedId"])')
           echo "BUNDLE_RID=$RID" >> "$CM_ENV"
+          # The widget extension needs its own App ID (no capabilities: it shares data through a
+          # team-prefixed Keychain group, which every profile allows).
+          WIDGET_ID="$BUNDLE_ID.widgets"
+          widget_rid() {
+            app-store-connect bundle-ids list --bundle-id-identifier "$WIDGET_ID" --strict-match-identifier --json \
+              | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")'
+          }
+          WIDGET_RID=$(widget_rid)
+          if [ -z "$WIDGET_RID" ]; then
+            app-store-connect bundle-ids create "$WIDGET_ID" --name "$APP_NAME Widgets" --platform IOS
+            WIDGET_RID=$(widget_rid)
+          fi
+          echo "WIDGET_RID=$WIDGET_RID" >> "$CM_ENV"
           echo "DEVELOPMENT_TEAM=$TEAM" >> "$CM_ENV"
 
       - name: Write build configuration (Secrets.xcconfig)
@@ -290,6 +303,9 @@ workflows:
           mkdir -p "$NEW_PROFILES"
           app-store-connect profiles create "$BUNDLE_RID" --type IOS_APP_STORE \
             --certificate-ids $CERT_IDS --name "Blith App Store $(date +%s)" \
+            --profiles-dir "$NEW_PROFILES" --save
+          app-store-connect profiles create "$WIDGET_RID" --type IOS_APP_STORE \
+            --certificate-ids $CERT_IDS --name "Blith Widgets App Store $(date +%s)" \
             --profiles-dir "$NEW_PROFILES" --save
           PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILES_DIR"

@@ -2,6 +2,7 @@ import BlithCore
 import Foundation
 import Observation
 import SwiftUI
+import WidgetKit
 
 /// Which provider feeds the app. Demo is explicit and always labelled; it never silently
 /// replaces real data.
@@ -76,7 +77,8 @@ final class AppModel {
             history = saved
             await rebuildSnapshot()
             phase = .ready
-            await refresh()
+            // Screenshot runs relaunch within seconds; force a sync so demo-only state is applied.
+            await refresh(force: LaunchOptions.huaweiLag != nil)
         } else {
             await runImport(categories: Persistence.connectedCategories)
         }
@@ -88,7 +90,7 @@ final class AppModel {
         case .appleHealth:
             return healthKit
         case .demo(let s):
-            return MockHealthProvider(scenario: s, now: { AppClock.now() })
+            return MockHealthProvider(scenario: s, now: { AppClock.now() }, huaweiLag: LaunchOptions.huaweiLag)
         }
     }
 
@@ -185,6 +187,13 @@ final class AppModel {
         }.value
         snapshot = result.0
         achievements = result.1
+        publishWidgets(result.0)
+    }
+
+    /// Hands the new numbers to the Home and Lock Screen widgets.
+    func publishWidgets(_ s: HealthSnapshot) {
+        WidgetStore.save(WidgetSnapshot(snapshot: s, companion: huaweiSync, isSample: isDemo))
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: Engagement
@@ -247,6 +256,8 @@ final class AppModel {
     func deleteAllData() async {
         await store.deleteAll()
         Persistence.reset()
+        WidgetStore.clear()
+        WidgetCenter.shared.reloadAllTimelines()
         history = nil
         snapshot = nil
         mode = nil

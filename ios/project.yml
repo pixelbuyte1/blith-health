@@ -54,15 +54,24 @@ targets:
       - path: Blith/Resources/Body3D
         buildPhase: resources
         optional: true
+      # Shared with the widget extension: the snapshot hand-off, and the widget views for the in-app gallery.
+      - path: Shared
+      - path: BlithWidgets/BlithWidgetViews.swift
     dependencies:
       - package: BlithCore
         product: BlithCore
       - sdk: HealthKit.framework
+      - target: BlithWidgets
     entitlements:
       path: Blith/Resources/Blith.entitlements
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        # First entry stays the app's own group (the default for existing items); the second is
+        # shared with the widget. Team-prefixed Keychain groups need no portal registration.
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.blith.health
+          - $(AppIdentifierPrefix)com.blith.health.shared
     info:
       path: Blith/Resources/Info.plist
       properties:
@@ -112,3 +121,54 @@ targets:
         ENABLE_PREVIEWS: "YES"
     scheme:
       gatherCoverageData: false
+
+  BlithWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BlithWidgets
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+      - path: Shared
+      - path: Blith/DesignSystem/Theme.swift
+      - path: Blith/Resources/Fonts
+        buildPhase: resources
+    dependencies:
+      - package: BlithCore
+        product: BlithCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    entitlements:
+      path: BlithWidgets/BlithWidgets.entitlements
+      properties:
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.blith.health.shared
+    info:
+      path: BlithWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Blith
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        UIAppFonts:
+          - Geist-Light.ttf
+          - Geist-Regular.ttf
+          - Geist-Medium.ttf
+          - Geist-SemiBold.ttf
+          - Geist-Bold.ttf
+          - GeistMono-Regular.ttf
+          - GeistMono-Medium.ttf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blith.health.widgets
+        PRODUCT_NAME: BlithWidgets
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM)
+        SKIP_INSTALL: "YES"
+        APPLICATION_EXTENSION_API_ONLY: "YES"
+        SUPPORTS_MACCATALYST: "NO"

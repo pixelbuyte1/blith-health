@@ -11,6 +11,11 @@ enum LaunchOptions {
     /// True for scripted CI launches (they always pass `-BlithDemo`); first-run hints stay hidden.
     static var isScripted: Bool { args.string(forKey: "BlithDemo") != nil }
 
+    /// `-BlithHuaweiLagHours 20`: demo data shows Huawei Health as 20 hours behind.
+    static var huaweiLag: TimeInterval? {
+        args.object(forKey: "BlithHuaweiLagHours") == nil ? nil : args.double(forKey: "BlithHuaweiLagHours") * 3600
+    }
+
     @MainActor
     static func applyIfPresent(to app: AppModel) {
         if args.bool(forKey: "BlithResetOnboarding") {
@@ -59,6 +64,7 @@ enum LaunchOptions {
         case "weight": app.router.sheet = .weight
         case "profile": app.router.sheet = .profile
         case "sources": app.router.sheet = .sources
+        case "widgets": app.router.sheet = .widgets
         case "insight": if let i = app.snapshot?.feed.first { app.router.sheet = .insight(i) }
         case "achievements": app.router.showAchievements = true
         case "readiness": app.router.sheet = .readiness(nil)
