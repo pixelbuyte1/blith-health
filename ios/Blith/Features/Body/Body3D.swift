@@ -195,6 +195,8 @@ final class BodySceneController: NSObject {
     /// The rest of the skin as a translucent shell over the muscles (muscle layer only). It is not
     /// hit-tested, so taps reach the muscles underneath.
     let shellNode: SCNNode
+    /// Opaque inside of the body behind everything on the muscle layer (see `backingGeometry`).
+    let backingNode: SCNNode
     /// Region index (into `meta.regions`) of each shell element.
     private let shellRegions: [Int]
     private var shellMaterials: [SCNMaterial] = []
@@ -242,6 +244,7 @@ final class BodySceneController: NSObject {
         let shell = BodySceneController.shellGeometry(model)
         shellNode = SCNNode(geometry: shell.geometry)
         shellRegions = shell.regions
+        backingNode = SCNNode(geometry: BodySceneController.backingGeometry(model))
         super.init()
         build()
     }
@@ -265,6 +268,7 @@ final class BodySceneController: NSObject {
         headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
         shellMaterials = shellRegions.map { _ in Self.shellMaterial(opacity: style.shellOpacity) }
         shellNode.geometry?.materials = shellMaterials
+        backingNode.geometry?.materials = [Self.backingMaterial()]
         skinNode.geometry?.materials = skinMaterials
         muscleNode.geometry?.materials = muscleMaterials
         headNode.geometry?.materials = [headMaterial]
@@ -272,6 +276,7 @@ final class BodySceneController: NSObject {
         turntable.addChildNode(muscleNode)
         turntable.addChildNode(headNode)
         turntable.addChildNode(shellNode)
+        turntable.addChildNode(backingNode)
         turntable.addChildNode(markers)
         scene.rootNode.addChildNode(turntable)
         scene.rootNode.addChildNode(floorNode())
@@ -439,6 +444,11 @@ final class BodySceneController: NSObject {
         if let cached = offsetCache.value { return cached }
         let geometry = model.skin.geometry
         let count = geometry.sources(for: .vertex).first?.vectorCount ?? 0
+        // Measured per vertex by design/body3d/skin_offsets.py: just enough to clear the muscles there.
+        if let measured = measuredOffsets(count: count) {
+            offsetCache.value = measured
+            return measured
+        }
         var out = [Float](repeating: skinOffset, count: count)
         var triangles: [Int] = []
         for (i, group) in model.skin.groups.enumerated() where i < geometry.elements.count {
@@ -470,6 +480,34 @@ final class BodySceneController: NSObject {
         }
         offsetCache.value = out
         return out
+    }
+
+    /// `skin_offsets.bin` ("BLO1", u32 count, float32 per skin vertex), if present and matching the model.
+    static func measuredOffsets(count: Int) -> [Float]? {
+        guard let url = Bundle.main.url(forResource: "skin_offsets", withExtension: "bin"),
+              let data = try? Data(contentsOf: url), data.count == 8 + count * 4,
+              String(data: data.prefix(4), encoding: .ascii) == "BLO1" else { return nil }
+        return data.withUnsafeBytes { raw in
+            (0..<count).map { raw.loadUnaligned(fromByteOffset: 8 + $0 * 4, as: Float.self) }
+        }
+    }
+
+    /// The inside of the body seen from within (back faces only, drawn opaque in a deep skin tone).
+    /// It sits behind the muscles from any angle and fills the gap between muscles and skin, so the
+    /// translucent skin never shows the background through it as a pale outline.
+    static func backingGeometry(_ model: Body3DModel) -> SCNGeometry? {
+        let source = model.skin.geometry
+        guard !source.elements.isEmpty else { return nil }
+        return SCNGeometry(sources: inflatedSources(source, offsets: skinOffsets(model).map { $0 - 0.002 }),
+                           elements: source.elements)
+    }
+
+    static func backingMaterial() -> SCNMaterial {
+        let m = SCNMaterial()
+        m.lightingModel = .constant
+        m.diffuse.contents = UIColor(hex: 0xC48468)
+        m.cullMode = .front
+        return m
     }
 
     /// The geometry's sources with every vertex moved along its normal by its offset (computed once).
@@ -580,6 +618,7 @@ final class BodySceneController: NSObject {
         muscleNode.isHidden = layer != .muscle
         headNode.isHidden = layer != .muscle
         shellNode.isHidden = layer != .muscle
+        backingNode.isHidden = layer != .muscle
         floorMaterial?.diffuse.contents = layer == .muscle ? Self.floorWarm : Self.floorBlue
         let camera = cameraNode.camera
         if layer == .skin {
