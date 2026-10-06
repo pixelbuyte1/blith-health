@@ -133,8 +133,9 @@ Missing data and real zero always look different.
   `body3d.json` and on the Body screen). Notes anchor to regions, never screen points. The 3D stage is a
   dark imaging chamber in both appearances.
 - **Muscle layer look ("Soft radiant")** — a stylised anatomical mannequin, never exposed red tissue:
-  warm ivory resin with low-contrast muscle borders, a cool rim and a smooth head (the skin's head
-  replaces the facial muscles). States: resting; touched or chosen region (pale blue edge); selected
+  peach muscles with their real shading under a translucent skin shell (the BodyParts3D skin, front-most
+  layer only, warm bright edge), and a smooth opaque head in place of the facial muscles. Selecting a
+  muscle thins the skin over its region so the blue shows through. States: resting; touched or chosen region (pale blue edge); selected
   muscle (soft blue core, lavender edge, faint cyan inner light, one small swell that settles); everything
   else dims a little. Bloom is nearly off on this layer, so nothing glows much. "Minimal glow" flattens the
   tone further for people who want less detail. The selected part shows a small figure glyph (code-drawn,

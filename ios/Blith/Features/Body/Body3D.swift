@@ -166,7 +166,10 @@ enum AnatomyStyle: String, CaseIterable, Identifiable {
     var title: String { self == .radiant ? "Soft radiant" : "Minimal glow" }
     /// The shader's `detail` value: 1 keeps muscle borders and tone variation, 0 flattens them.
     var detail: Float { self == .radiant ? 1 : 0 }
-    var occlusion: CGFloat { self == .radiant ? 0.6 : 0.28 }
+    var occlusion: CGFloat { self == .radiant ? 0.6 : 0.3 }
+    /// How much of the skin shell covers the muscles: Soft radiant lets the anatomy show through,
+    /// Minimal glow keeps the body smoother.
+    var shellOpacity: CGFloat { self == .radiant ? 0.42 : 0.68 }
 }
 
 /// The dark imaging chamber the figure stands in (the documented hex exception, like the lighting).
@@ -189,6 +192,13 @@ final class BodySceneController: NSObject {
     let muscleNode: SCNNode
     /// The skin's smooth head, shown on the muscle layer instead of exposed facial muscles.
     let headNode: SCNNode
+    /// The rest of the skin as a translucent shell over the muscles (muscle layer only). It is not
+    /// hit-tested, so taps reach the muscles underneath.
+    let shellNode: SCNNode
+    /// Region index (into `meta.regions`) of each shell element.
+    private let shellRegions: [Int]
+    private var shellMaterials: [SCNMaterial] = []
+    private var floorMaterial: SCNMaterial?
     let cameraNode = SCNNode()
     let rig = SCNNode()
     let keyLight = SCNNode()
@@ -229,6 +239,9 @@ final class BodySceneController: NSObject {
         skinNode = SCNNode(geometry: model.skin.geometry.copy() as? SCNGeometry)
         muscleNode = SCNNode(geometry: model.muscle.geometry.copy() as? SCNGeometry)
         headNode = SCNNode(geometry: BodySceneController.headGeometry(model))
+        let shell = BodySceneController.shellGeometry(model)
+        shellNode = SCNNode(geometry: shell.geometry)
+        shellRegions = shell.regions
         super.init()
         build()
     }
@@ -249,13 +262,16 @@ final class BodySceneController: NSObject {
             return Self.anatomyMaterial(base: muscle.kind == "tendon" ? Self.tendon : Self.ivory, vary: Self.variation(for: muscle))
         }
         muscleState = Array(repeating: MaterialState(), count: muscleMaterials.count)
-        headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
+        headMaterial = Self.anatomyMaterial(base: Self.headTone, vary: 0)
+        shellMaterials = shellRegions.map { _ in Self.shellMaterial(opacity: style.shellOpacity) }
+        shellNode.geometry?.materials = shellMaterials
         skinNode.geometry?.materials = skinMaterials
         muscleNode.geometry?.materials = muscleMaterials
         headNode.geometry?.materials = [headMaterial]
         turntable.addChildNode(skinNode)
         turntable.addChildNode(muscleNode)
         turntable.addChildNode(headNode)
+        turntable.addChildNode(shellNode)
         turntable.addChildNode(markers)
         scene.rootNode.addChildNode(turntable)
         scene.rootNode.addChildNode(floorNode())
@@ -327,9 +343,12 @@ final class BodySceneController: NSObject {
 
     /// Warm ivory resin rather than exposed tissue; tendons a touch paler, the underlayer (seen only
     /// in the gaps between muscles) a touch deeper.
-    static let ivory = UIColor(hex: 0xDCBDA9)
-    static let tendon = UIColor(hex: 0xE8DCD1)
-    static let underlayer = UIColor(hex: 0xBC9C89)
+    static let ivory = UIColor(hex: 0xD99A7E)
+    static let tendon = UIColor(hex: 0xE3B9A4)
+    static let underlayer = UIColor(hex: 0xA86A55)
+    /// The translucent skin, and the opaque head tinted to match skin seen over muscle.
+    static let skinTone = UIColor(hex: 0xF1C7AF)
+    static let headTone = UIColor(hex: 0xE3AD93)
 
     /// A stable value in -1...1 per muscle name, so neighbouring muscles differ by a few percent of tone.
     static func variation(for muscle: Body3DModel.Muscle) -> Float {
@@ -356,10 +375,10 @@ final class BodySceneController: NSObject {
     float3 srV = normalize(-_surface.position);
     float srNdv = saturate(dot(srN, srV));
     float srF = pow(1.0 - srNdv, 2.4);
-    float3 srCol = mix(_output.color.rgb, _surface.diffuse.rgb * (0.78 + 0.22 * srNdv), (0.56 - 0.24 * detail));
+    float3 srCol = mix(_output.color.rgb, _surface.diffuse.rgb * (0.78 + 0.22 * srNdv), (0.30 - 0.15 * detail));
     srCol *= 1.0 + vary * (0.012 + 0.038 * detail);
     srCol += float3(0.30, 0.16, 0.10) * pow(1.0 - srNdv, 1.5) * 0.12;
-    srCol += float3(0.62, 0.76, 1.0) * srF * (0.10 + 0.06 * detail);
+    srCol += float3(0.62, 0.76, 1.0) * srF * (0.05 + 0.04 * detail);
     float srLit = saturate(highlight + press);
     float srLum = dot(srCol, float3(0.2126, 0.7152, 0.0722));
     srCol = mix(srCol, mix(float3(srLum), srCol, 0.7) * 0.7, dim * (1.0 - srLit));
@@ -405,24 +424,72 @@ final class BodySceneController: NSObject {
         return SCNGeometry(sources: source.sources, elements: elements)
     }
 
-    func floorNode() -> SCNNode {
+    /// The skin minus the head (the head is drawn opaque by `headNode`), and each element's region.
+    static func shellGeometry(_ model: Body3DModel) -> (geometry: SCNGeometry?, regions: [Int]) {
+        let head = model.regionIndex(.head)
+        let source = model.skin.geometry
+        let indices = model.skin.groups.indices.filter { model.skin.groups[$0].region != head && $0 < source.elements.count }
+        guard !indices.isEmpty else { return (nil, []) }
+        return (SCNGeometry(sources: source.sources, elements: indices.map { source.elements[$0] }),
+                indices.map { model.skin.groups[$0].region })
+    }
+
+    /// Smooth translucent skin over the muscles: lit peach with a soft sheen and a warm bright edge,
+    /// the front-most layer only. `dim` darkens it when a muscle elsewhere is selected; `highlight`
+    /// tints it faintly blue over a chosen region.
+    static let shellShader = """
+    #pragma arguments
+    float dim;
+    float highlight;
+    #pragma body
+    float3 shN = normalize(_surface.normal);
+    float3 shV = normalize(-_surface.position);
+    float shF = pow(1.0 - saturate(dot(shN, shV)), 3.0);
+    float3 shCol = _output.color.rgb + float3(1.0, 0.86, 0.78) * shF * 0.55;
+    shCol = mix(shCol, shCol * 0.72, dim);
+    shCol += float3(0.10, 0.26, 1.0) * highlight * (0.10 + 0.25 * shF);
+    _output.color.rgb = shCol;
+    """
+
+    static func shellMaterial(opacity: CGFloat) -> SCNMaterial {
+        let m = SCNMaterial()
+        m.lightingModel = .blinn
+        m.diffuse.contents = skinTone
+        m.specular.contents = UIColor(white: 0.25, alpha: 1)
+        m.shininess = 0.4
+        m.transparency = opacity
+        m.transparencyMode = .singleLayer
+        m.setValue(Float(0), forKey: "dim")
+        m.setValue(Float(0), forKey: "highlight")
+        m.shaderModifiers = [.fragment: shellShader]
+        return m
+    }
+
+    static let floorBlue = floorImage(glow: UIColor(hex: 0x4C8DFF), ring: UIColor(hex: 0x3DDCFF))
+    static let floorWarm = floorImage(glow: UIColor(hex: 0xFFE3D4), ring: UIColor(hex: 0xFFF1E8))
+
+    static func floorImage(glow: UIColor, ring: UIColor) -> UIImage {
         let size = 256
-        let img = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { ctx in
-            let colors = [UIColor(hex: 0x4C8DFF, alpha: 0.55).cgColor, UIColor(hex: 0x4C8DFF, alpha: 0.12).cgColor, UIColor.clear.cgColor] as CFArray
+        return UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { ctx in
+            let colors = [glow.withAlphaComponent(0.45).cgColor, glow.withAlphaComponent(0.1).cgColor, UIColor.clear.cgColor] as CFArray
             let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.45, 1])!
             let c = CGPoint(x: size / 2, y: size / 2)
             ctx.cgContext.drawRadialGradient(g, startCenter: c, startRadius: 0, endCenter: c, endRadius: CGFloat(size) / 2, options: [])
-            UIColor(hex: 0x3DDCFF, alpha: 0.5).setStroke()
+            ring.withAlphaComponent(0.5).setStroke()
             for r in [0.3, 0.42] {
                 let rr = CGFloat(size) * r
                 ctx.cgContext.setLineWidth(1.5)
                 ctx.cgContext.strokeEllipse(in: CGRect(x: c.x - rr, y: c.y - rr, width: rr * 2, height: rr * 2))
             }
         }
+    }
+
+    func floorNode() -> SCNNode {
         let plane = SCNPlane(width: 1.5, height: 1.5)
         let m = SCNMaterial()
         m.lightingModel = .constant
-        m.diffuse.contents = img
+        m.diffuse.contents = Self.floorBlue
+        floorMaterial = m
         m.isDoubleSided = true
         m.writesToDepthBuffer = false
         m.blendMode = .add
@@ -440,8 +507,12 @@ final class BodySceneController: NSObject {
         skinNode.isHidden = layer != .skin
         muscleNode.isHidden = layer != .muscle
         headNode.isHidden = layer != .muscle
+        shellNode.isHidden = layer != .muscle
+        floorMaterial?.diffuse.contents = layer == .muscle ? Self.floorWarm : Self.floorBlue
         let camera = cameraNode.camera
         if layer == .skin {
+            keyLight.light?.intensity = 900
+            keyLight.light?.color = UIColor(hex: 0xDCE6FF)
             ambientLight.intensity = 260
             ambientLight.color = UIColor(hex: 0x9FB4FF)
             rimLight.intensity = 500
@@ -450,11 +521,13 @@ final class BodySceneController: NSObject {
             camera?.bloomIntensity = 0.55
             camera?.bloomThreshold = 0.6
         } else {
-            // Even, soft light so the anatomy reads as frosted resin. Bloom is nearly off: only the
-            // selected muscle's edge catches a little of it.
-            ambientLight.intensity = 340
-            ambientLight.color = UIColor(hex: 0xFFF1E8)
-            rimLight.intensity = 460
+            // Warm studio light for a smooth body with the anatomy beneath. Bloom is nearly off: only
+            // the bright skin edge and the selected muscle catch a little of it.
+            keyLight.light?.intensity = 1000
+            keyLight.light?.color = UIColor(hex: 0xFFF0E6)
+            ambientLight.intensity = 260
+            ambientLight.color = UIColor(hex: 0xFFE9DE)
+            rimLight.intensity = 600
             rimLight.color = UIColor(hex: 0xCFE0FF)
             camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion
             camera?.bloomIntensity = 0.18
@@ -466,6 +539,26 @@ final class BodySceneController: NSObject {
         self.style = style
         for m in muscleMaterials + [headMaterial] { m.setValue(style.detail, forKey: "detail") }
         if layer == .muscle { cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion }
+        applyShell(animated: false)
+    }
+
+    /// Region whose skin clears so the selection underneath shows; nil when nothing is selected.
+    private var clearedRegion: Int?
+    private var shellDimmed = false
+
+    /// Skin shell opacity and tint for the current selection: the chosen region's skin thins so the
+    /// muscle's light shows through, the rest of the skin dims with the muscles.
+    private func applyShell(animated: Bool) {
+        let reduce = UIAccessibility.isReduceMotionEnabled
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = animated && !reduce ? 0.3 : 0
+        for (i, m) in shellMaterials.enumerated() {
+            let cleared = clearedRegion == shellRegions[i]
+            m.transparency = cleared ? 0.12 : style.shellOpacity
+            m.setValue(shellDimmed && !cleared ? Float(1) : Float(0), forKey: "dim")
+            m.setValue(cleared ? Float(1) : Float(0), forKey: "highlight")
+        }
+        SCNTransaction.commit()
     }
 
     /// Selection states. Figure layer: the region glows. Muscle layer: a chosen muscle turns radiant
@@ -495,6 +588,9 @@ final class BodySceneController: NSObject {
         head.dim = active && !headOnly ? 1 : 0
         Self.transition(headMaterial, from: headState, to: head)
         headState = head
+        clearedRegion = muscle?.bodyRegion.flatMap(model.regionIndex) ?? (headOnly ? nil : r)
+        shellDimmed = active
+        applyShell(animated: true)
     }
 
     static func transition(_ m: SCNMaterial, from old: MaterialState, to new: MaterialState) {
