@@ -266,7 +266,7 @@ final class BodySceneController: NSObject {
         }
         muscleState = Array(repeating: MaterialState(), count: muscleMaterials.count)
         headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
-        shellMaterials = shellRegions.map { _ in Self.shellMaterial(opacity: style.shellOpacity) }
+        shellMaterials = shellRegions.map { Self.shellMaterial(opacity: shellOpacity(region: $0)) }
         shellNode.geometry?.materials = shellMaterials
         backingNode.geometry?.materials = [Self.backingMaterial()]
         skinNode.geometry?.materials = skinMaterials
@@ -349,7 +349,7 @@ final class BodySceneController: NSObject {
     /// Warm ivory resin rather than exposed tissue; tendons a touch paler, the underlayer (seen only
     /// in the gaps between muscles) a touch deeper.
     static let ivory = UIColor(hex: 0xD99A7E)
-    static let tendon = UIColor(hex: 0xE3B9A4)
+    static let tendon = UIColor(hex: 0xDDAA92)
     static let underlayer = UIColor(hex: 0xA86A55)
     /// The translucent skin (it also covers the opaque head, which sits just inside it).
     static let skinTone = UIColor(hex: 0xF1C7AF)
@@ -505,7 +505,7 @@ final class BodySceneController: NSObject {
     static func backingMaterial() -> SCNMaterial {
         let m = SCNMaterial()
         m.lightingModel = .constant
-        m.diffuse.contents = UIColor(hex: 0xC48468)
+        m.diffuse.contents = UIColor(hex: 0xD0907A)
         m.cullMode = .front
         return m
     }
@@ -631,6 +631,8 @@ final class BodySceneController: NSObject {
             camera?.screenSpaceAmbientOcclusionIntensity = 0
             camera?.bloomIntensity = 0.55
             camera?.bloomThreshold = 0.6
+            camera?.wantsExposureAdaptation = true
+            camera?.exposureOffset = 0
         } else {
             // Warm studio light for a smooth body with the anatomy beneath. Bloom is nearly off: only
             // the bright skin edge and the selected muscle catch a little of it.
@@ -643,6 +645,10 @@ final class BodySceneController: NSObject {
             camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion
             camera?.bloomIntensity = 0
             camera?.bloomThreshold = 1
+            // Fixed exposure: auto exposure brightens for the dark chamber and blows the peach skin
+            // out to cream, with thin tendons clipping to white.
+            camera?.wantsExposureAdaptation = false
+            camera?.exposureOffset = 0.2
         }
     }
 
@@ -651,6 +657,11 @@ final class BodySceneController: NSObject {
         for m in muscleMaterials + [headMaterial] { m.setValue(style.detail, forKey: "detail") }
         if layer == .muscle { cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion }
         applyShell(animated: false)
+    }
+
+    /// The neck's skin covers a little more, so the smooth head blends into it without a seam.
+    private func shellOpacity(region: Int) -> CGFloat {
+        region == model.regionIndex(.neck) ? max(style.shellOpacity, 0.5) : style.shellOpacity
     }
 
     /// Region whose skin clears so the selection underneath shows; nil when nothing is selected.
@@ -665,7 +676,7 @@ final class BodySceneController: NSObject {
         SCNTransaction.animationDuration = animated && !reduce ? 0.3 : 0
         for (i, m) in shellMaterials.enumerated() {
             let cleared = clearedRegion == shellRegions[i]
-            m.transparency = cleared ? 0.12 : style.shellOpacity
+            m.transparency = cleared ? 0.12 : shellOpacity(region: shellRegions[i])
             m.setValue(shellDimmed && !cleared ? Float(1) : Float(0), forKey: "dim")
             m.setValue(cleared ? Float(1) : Float(0), forKey: "highlight")
         }
