@@ -11,6 +11,11 @@ come from the founder, who will also ask for fixes to these. Wait for the final 
 | `mic.png` | Microphone | Good as is |
 | `new-chat.png` | New chat | Speech bubble with a teal plus; the bubble outline has gaps around the plus |
 | `assistant.png` | Assistant avatar | Heartbeat line in a circle |
+| `log-activity.png` | Log activity (footprint with plus) | Fine; the plus floats close to the heel edge |
+| `save-to-health.png` | Save to Apple Health (heart, down arrow) | Fine. Arrow is slightly low in the heart |
+| `sleep.png` | Sleep (crescent, star) | Fine. Teal is a touch darker than on the other icons |
+| `readiness.png` | Readiness (open ring, tick) | Fine |
+| `heart-rate.png` | Heart rate (pulse line) | Ink only, no teal |
 
 ## Style (match this for every new icon)
 - Thin monoline outline, rounded caps and joins, about 1.75 px stroke on a 24 px grid, no fills, gradients or shadows.
