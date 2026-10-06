@@ -266,7 +266,7 @@ final class BodySceneController: NSObject {
         }
         muscleState = Array(repeating: MaterialState(), count: muscleMaterials.count)
         headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
-        shellMaterials = shellRegions.map { Self.shellMaterial(opacity: shellOpacity(region: $0)) }
+        shellMaterials = shellRegions.map { _ in Self.shellMaterial(opacity: style.shellOpacity) }
         shellNode.geometry?.materials = shellMaterials
         backingNode.geometry?.materials = [Self.backingMaterial()]
         skinNode.geometry?.materials = skinMaterials
@@ -659,11 +659,6 @@ final class BodySceneController: NSObject {
         applyShell(animated: false)
     }
 
-    /// The neck's skin covers a little more, so the smooth head blends into it without a seam.
-    private func shellOpacity(region: Int) -> CGFloat {
-        region == model.regionIndex(.neck) ? max(style.shellOpacity, 0.5) : style.shellOpacity
-    }
-
     /// Region whose skin clears so the selection underneath shows; nil when nothing is selected.
     private var clearedRegion: Int?
     private var shellDimmed = false
@@ -676,7 +671,7 @@ final class BodySceneController: NSObject {
         SCNTransaction.animationDuration = animated && !reduce ? 0.3 : 0
         for (i, m) in shellMaterials.enumerated() {
             let cleared = clearedRegion == shellRegions[i]
-            m.transparency = cleared ? 0.12 : shellOpacity(region: shellRegions[i])
+            m.transparency = cleared ? 0.12 : style.shellOpacity
             m.setValue(shellDimmed && !cleared ? Float(1) : Float(0), forKey: "dim")
             m.setValue(cleared ? Float(1) : Float(0), forKey: "highlight")
         }
