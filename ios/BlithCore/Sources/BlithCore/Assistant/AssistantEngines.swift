@@ -88,6 +88,8 @@ public struct LLMAssistant: AssistantEngine {
     - Avoid empty praise ("Great job!") unless the data supports it, and never shame.
     - Body notes are the person's own words with an event date. Show them with dates, never diagnose from them, and never treat a resolved or old note as a current condition. When a note sits beside a change in the data, say the data can't show the cause.
     - For a question about one day, call get_day_detail and attach show_widget day_steps (and body_note when a note exists that day).
+    - Hard limit: 4 short sentences. Write plain sentences. Never use em dashes; use a full stop or a comma.
+    - For an everyday ache or pain the person mentions (for example a stiff lower back), don't explain causes and don't give treatment advice. Acknowledge it in one sentence, say Blith can't assess it, suggest a clinician if it lasts or gets worse, and tell them they can add it as a dated note on the Body tab. Mention emergency care in one line only if they describe red flags.
     - Dates: resolve relative dates ("last Tuesday", "August") from today's date given below, using YYYY-MM-DD in tool calls.
     """
 
@@ -111,7 +113,7 @@ public struct LLMAssistant: AssistantEngine {
             // Final round: no tools, force an answer.
             let reply = try await client.complete(messages: messages, tools: round == maxRounds - 1 ? [] : HealthAssistantTools.definitions)
             guard let calls = reply.tool_calls, !calls.isEmpty else {
-                let text = (reply.content ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let text = Self.plainStyle(reply.content ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { throw AssistantError.emptyResponse }
                 if blocks.isEmpty, let suggested { blocks.append(suggested); blocks.append(contentsOf: extras) }
                 return ChatMessage(role: .assistant, text: text, blocks: Self.dedupe(blocks), evidence: Self.dedupe(evidence), toolsUsed: used)
@@ -134,6 +136,12 @@ public struct LLMAssistant: AssistantEngine {
             }
         }
         throw AssistantError.emptyResponse
+    }
+
+    /// Blith's voice uses plain sentences: models still slip in em dashes, so they become commas here.
+    static func plainStyle(_ text: String) -> String {
+        text.replacingOccurrences(of: " \u{2014} ", with: ", ")
+            .replacingOccurrences(of: "\u{2014}", with: ", ")
     }
 
     static func dedupe<T: Identifiable>(_ items: [T]) -> [T] {
