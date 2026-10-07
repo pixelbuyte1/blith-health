@@ -45,6 +45,7 @@ struct BodyView: View {
                     }
                     .padding(.horizontal, Space.page)
                     .padding(.bottom, Space.section)
+                    .containerRelativeFrame(.horizontal)
                 }
                 .scrollIndicators(.hidden)
                 .blithBackground(wash: Palette.signal.opacity(0.14))

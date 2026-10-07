@@ -58,6 +58,8 @@ struct TodayView: View {
                 }
                 .padding(.horizontal, Space.page)
                 .padding(.bottom, Space.section)
+                // Pin the page to the screen width so it can't slide sideways while scrolling.
+                .containerRelativeFrame(.horizontal)
                 .scrollTargetLayout()
             }
             .scrollPosition(id: $scrollTarget, anchor: .top)
@@ -139,7 +141,7 @@ struct TodayView: View {
     /// Under the movement hero: why there's no readiness. Without overnight heart data it says what an
     /// Apple Watch adds; with it, BlithCore's own sentence about the missing night.
     func readinessNote(_ s: HealthSnapshot) -> some View {
-        let needsWatch = !s.hasOvernightHeart
+        let needsWatch = !s.hasRecordedOvernightHeart
         let title = needsWatch && s.sleepScore == nil ? "Readiness and sleep" : "Readiness"
         let text: String
         if !needsWatch {
@@ -415,6 +417,12 @@ extension HealthSnapshot {
     /// arriving recently enough that Health doesn't count it as stale.
     var hasOvernightHeart: Bool {
         [HealthMetric.hrv, .restingHeartRate].contains(where: { availability[$0] == .available })
+    }
+
+    /// Whether HRV or resting heart rate has ever been recorded, even if the newest value is old (an
+    /// Apple Watch owner who skipped wearing it overnight). Only without this does Today suggest a Watch.
+    var hasRecordedOvernightHeart: Bool {
+        [HealthMetric.hrv, .restingHeartRate].contains(where: { availability[$0] == .available || availability[$0] == .stale })
     }
 }
 

@@ -317,7 +317,7 @@ final class BodySceneController: NSObject {
             #pragma body
             \(fresnel)
             _output.color.rgb += float3(0.725, 0.855, 1.0) * f * 1.15;
-            _output.color.rgb += float3(0.49, 0.70, 1.0) * highlight * (0.22 + 0.9 * f);
+            _output.color.rgb += float3(0.49, 0.70, 1.0) * highlight * (0.08 + 0.32 * f);
             """,
         ]
         return m
