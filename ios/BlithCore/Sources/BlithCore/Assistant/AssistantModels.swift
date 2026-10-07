@@ -18,9 +18,11 @@ public struct ChatMessage: Identifiable, Codable, Hashable, Sendable {
     public var isLocal: Bool
     /// The Blith model that wrote an AI answer ("Quick" or "Deep"); nil for older chats and local answers.
     public var modelName: String?
+    /// Labels of what the person tagged with @ on a question ("Right knee", "Sleep"); nil when none.
+    public var tags: [String]?
 
     public init(id: UUID = UUID(), role: Role, text: String, blocks: [AssistantBlock] = [], evidence: [EvidenceItem] = [],
-                toolsUsed: [String] = [], createdAt: Date = Date(), isError: Bool = false, isLocal: Bool = false, modelName: String? = nil) {
+                toolsUsed: [String] = [], createdAt: Date = Date(), isError: Bool = false, isLocal: Bool = false, modelName: String? = nil, tags: [String]? = nil) {
         self.id = id
         self.role = role
         self.text = text
@@ -31,6 +33,7 @@ public struct ChatMessage: Identifiable, Codable, Hashable, Sendable {
         self.isError = isError
         self.isLocal = isLocal
         self.modelName = modelName
+        self.tags = tags
     }
 }
 

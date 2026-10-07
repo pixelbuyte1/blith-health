@@ -13,6 +13,16 @@ final class AskModel {
     var pendingQuestion: String?
     /// The model the person picked with the composer toggle for this chat; nil means automatic.
     var pickedModel: AskModelChoice?
+    /// What the person tagged with @ for the next question.
+    var tags: [AskTag] = []
+
+    func toggleTag(_ tag: AskTag) {
+        if let i = tags.firstIndex(of: tag) {
+            tags.remove(at: i)
+        } else if tags.count < AskTag.limit {
+            tags.append(tag)
+        }
+    }
 
     /// Automatic: Quick for the first answers of a chat, then Deep for the follow-ups.
     var currentModel: AskModelChoice {
@@ -26,6 +36,7 @@ final class AskModel {
         draft = ""
         pendingQuestion = nil
         pickedModel = nil
+        tags = []
     }
 
     /// Chooses the engine: the AI model when the user allowed sharing and a key exists,
@@ -38,9 +49,13 @@ final class AskModel {
             return
         }
         draft = ""
+        let tagged = tags
+        tags = []
         app.recordQuestion()
         let history = messages
-        messages.append(ChatMessage(role: .user, text: question))
+        messages.append(ChatMessage(role: .user, text: question, tags: tagged.isEmpty ? nil : tagged.map(\.label)))
+        // The engines see the tags as one extra line after the question.
+        let prompt = tagged.isEmpty ? question : question + "\n\nTagged: " + tagged.map(\.context).joined(separator: "; ")
         isResponding = true
         progress = "Thinking"
         defer {
@@ -54,14 +69,14 @@ final class AskModel {
             if useAI, let key = AppConfig.openRouterKey {
                 let choice = currentModel
                 let engine = LLMAssistant(client: OpenRouterClient(apiKey: key, model: choice.modelID), tools: tools)
-                var reply = try await engine.respond(to: question, history: history, progress: onProgress)
+                var reply = try await engine.respond(to: prompt, history: history, progress: onProgress)
                 reply.modelName = choice.name
                 messages.append(reply)
             } else {
-                messages.append(try await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
+                messages.append(try await LocalAssistant(tools: tools).respond(to: prompt, history: history, progress: onProgress))
             }
         } catch {
-            var local = (try? await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
+            var local = (try? await LocalAssistant(tools: tools).respond(to: prompt, history: history, progress: onProgress))
                 ?? ChatMessage(role: .assistant, text: "Something went wrong answering that.", isError: true)
             local.text = "I couldn't reach the AI service, so here's what I can tell from your data on this iPhone:\n\n" + local.text
             messages.append(local)

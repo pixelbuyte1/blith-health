@@ -5,6 +5,7 @@ struct AskView: View {
     @Environment(AppModel.self) private var app
     @Environment(AppRouter.self) private var router
     @FocusState private var focused: Bool
+    @State private var showTags = false
 
     static let suggestions: [(String, String)] = [
         ("What's my readiness today, and why?", "bl.readiness"), ("How have I been walking?", "bl.steps"),
@@ -124,7 +125,23 @@ struct AskView: View {
         let model = ask.currentModel
         let usesAI = AppConfig.aiConfigured && Persistence.aiConsent != false
         return VStack(spacing: Space.s) {
+            if showTags {
+                AskTagPanel(tagged: ask.tags) { tag in
+                    app.ask.toggleTag(tag)
+                    showTags = false
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
             VStack(alignment: .leading, spacing: Space.m) {
+                if !ask.tags.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Space.xs) {
+                            ForEach(ask.tags) { tag in
+                                AskTagChip(tag: tag) { app.ask.toggleTag(tag) }
+                            }
+                        }
+                    }
+                }
                 TextField("Ask about your health…", text: $ask.draft, axis: .vertical)
                     .lineLimit(1...5)
                     .focused($focused)
@@ -132,6 +149,18 @@ struct AskView: View {
                     .onSubmit { submit() }
                     .padding(.horizontal, Space.xs)
                 HStack(spacing: Space.s) {
+                    Button {
+                        withAnimation(.snappy(duration: 0.25)) { showTags.toggle() }
+                    } label: {
+                        Text("@")
+                            .font(Typo.geist(19, .semibold, relativeTo: .body))
+                            .foregroundStyle(Palette.ink)
+                            .frame(width: 38, height: 38)
+                            .background(showTags ? Palette.accentSoft : Palette.raised, in: Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(showTags ? "Close tags" : "Tag a body part, sleep, heart rate or a day")
                     if usesAI {
                         AskModelToggle(selection: model) { app.ask.pickedModel = $0 }
                     }
@@ -180,14 +209,22 @@ struct MessageView: View {
         if message.role == .user {
             HStack {
                 Spacer(minLength: 48)
-                Text(message.text)
-                    .padding(.horizontal, Space.l)
-                    .padding(.vertical, Space.m)
-                    .font(Typo.body)
-                    .foregroundStyle(Palette.ink)
-                    .background(Palette.raised, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Palette.hairline, lineWidth: 1))
+                VStack(alignment: .trailing, spacing: Space.xs) {
+                    if let tags = message.tags, !tags.isEmpty {
+                        Text(tags.joined(separator: " · "))
+                            .font(Typo.mono(11, .medium))
+                            .foregroundStyle(Palette.signal)
+                    }
+                    Text(message.text)
+                }
+                .padding(.horizontal, Space.l)
+                .padding(.vertical, Space.m)
+                .font(Typo.body)
+                .foregroundStyle(Palette.ink)
+                .background(Palette.raised, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Palette.hairline, lineWidth: 1))
             }
+            .accessibilityElement(children: .combine)
             .accessibilityLabel("You: \(message.text)")
         } else {
             VStack(alignment: .leading, spacing: Space.m) {
