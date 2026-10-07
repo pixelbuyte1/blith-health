@@ -166,7 +166,7 @@ enum AnatomyStyle: String, CaseIterable, Identifiable {
     var title: String { self == .radiant ? "Soft radiant" : "Minimal glow" }
     /// The shader's `detail` value: 1 keeps muscle borders and tone variation, 0 flattens them.
     var detail: Float { self == .radiant ? 1 : 0 }
-    var occlusion: CGFloat { self == .radiant ? 0.6 : 0.28 }
+    var occlusion: CGFloat { self == .radiant ? 0.9 : 0.28 }
 }
 
 /// The dark imaging chamber the figure stands in (the documented hex exception, like the lighting).
@@ -246,10 +246,10 @@ final class BodySceneController: NSObject {
                 return Self.anatomyMaterial(base: Self.underlayer, vary: 0)
             }
             let muscle = model.meta.muscles[m]
-            return Self.anatomyMaterial(base: muscle.kind == "tendon" ? Self.tendon : Self.ivory, vary: Self.variation(for: muscle))
+            return Self.anatomyMaterial(base: muscle.kind == "tendon" ? Self.tendon : Self.tissue, vary: Self.variation(for: muscle))
         }
         muscleState = Array(repeating: MaterialState(), count: muscleMaterials.count)
-        headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
+        headMaterial = Self.anatomyMaterial(base: Self.tissue, vary: 0)
         skinNode.geometry?.materials = skinMaterials
         muscleNode.geometry?.materials = muscleMaterials
         headNode.geometry?.materials = [headMaterial]
@@ -325,11 +325,11 @@ final class BodySceneController: NSObject {
 
     // MARK: Soft radiant anatomy
 
-    /// Warm ivory resin rather than exposed tissue; tendons a touch paler, the underlayer (seen only
-    /// in the gaps between muscles) a touch deeper.
-    static let ivory = UIColor(hex: 0xDCBDA9)
-    static let tendon = UIColor(hex: 0xE8DCD1)
-    static let underlayer = UIColor(hex: 0xBC9C89)
+    /// Deep tissue red as before Soft radiant, so the figure sits in the dark chamber without glare;
+    /// tendons a touch paler, the underlayer (seen only in the gaps between muscles) deeper.
+    static let tissue = UIColor(hex: 0x9C2328)
+    static let tendon = UIColor(hex: 0x93403F)
+    static let underlayer = UIColor(hex: 0x74191E)
 
     /// A stable value in -1...1 per muscle name, so neighbouring muscles differ by a few percent of tone.
     static func variation(for muscle: Body3DModel.Muscle) -> Float {
@@ -450,15 +450,14 @@ final class BodySceneController: NSObject {
             camera?.bloomIntensity = 0.55
             camera?.bloomThreshold = 0.6
         } else {
-            // Even, soft light so the anatomy reads as frosted resin. Bloom is nearly off: only the
-            // selected muscle's edge catches a little of it.
-            ambientLight.intensity = 340
-            ambientLight.color = UIColor(hex: 0xFFF1E8)
-            rimLight.intensity = 460
-            rimLight.color = UIColor(hex: 0xCFE0FF)
+            // The original muscle-layer lighting (before Soft radiant brightened it).
+            ambientLight.intensity = 300
+            ambientLight.color = UIColor(hex: 0xFFE9E4)
+            rimLight.intensity = 380
+            rimLight.color = UIColor(hex: 0xFFC2B8)
             camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion
-            camera?.bloomIntensity = 0.18
-            camera?.bloomThreshold = 0.92
+            camera?.bloomIntensity = 0.55
+            camera?.bloomThreshold = 0.6
         }
     }
 
