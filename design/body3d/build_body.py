@@ -832,6 +832,46 @@ def rectus_to_midline(V, gap=0.0012):
     return V
 
 
+# Sheets that lie over another muscle. The part of the sheet directly above it is dropped, so the
+# muscle underneath can be seen and tapped: the external oblique's aponeurosis covers the rectus
+# abdominis in the source model, which made the whole half of the abdomen one tap target.
+UNCOVER = (('External abdominal oblique', 'Rectus abdominis'),)
+
+
+def uncover(mparts, pairs=UNCOVER, depth=0.008, reach=0.004):
+    for cover, under in pairs:
+        for q in mparts:
+            if q['name'] != cover:
+                continue
+            beneath = [p for p in mparts if p['name'] == under and p['side'] == q['side']]
+            if not beneath:
+                continue
+            tree = cKDTree(np.concatenate([p['V'] for p in beneath] + [p['V'][p['F']].mean(1) for p in beneath]))
+            P = q['V'][q['F']]
+            c, n = P.mean(1), unit(np.cross(P[:, 1] - P[:, 0], P[:, 2] - P[:, 0]))
+            over = np.zeros(len(c), bool)
+            for t in np.linspace(0.0, depth, 9):
+                over |= tree.query(c - n * t)[0] < reach
+            q['V'], q['F'] = compact(q['V'], q['F'][~over])
+            print(f"  {cover} ({q['side']}): {int(over.sum())} of {len(over)} triangles over {under} dropped")
+
+
+def split_at_navel(mparts, y_navel, name='Rectus abdominis'):
+    """Each rectus abdominis becomes an upper and a lower part at the navel, so the front of the
+    abdomen is four tap targets."""
+    out = []
+    for q in mparts:
+        if q['name'] != name:
+            out.append(q)
+            continue
+        up = q['V'][q['F']].mean(1)[:, 1] >= y_navel
+        for mask, label in ((up, 'upper'), (~up, 'lower')):
+            if mask.sum() >= 20:
+                V_, F_ = compact(q['V'], q['F'][mask])
+                out.append(dict(q, V=V_, F=F_, name=f'{name} ({label} part)'))
+    return out
+
+
 def sphere_dirs():
     dirs = [[0, 1, 0], [0, -1, 0]]
     for el in (-35, 0, 35):
@@ -1106,6 +1146,9 @@ def main():
         V_, F_ = decimate(parts[i]['V'], parts[i]['F'], b)
         name, side, kind = pretty(parts[i]['name'])
         mparts.append(dict(V=V_, F=F_, name=name, side=side, kind=kind, src=parts[i]['name']))
+
+    uncover(mparts)
+    mparts = split_at_navel(mparts, L.y_navel)
 
     # regions for muscle triangles: region of the nearest skin point
     for q in mparts:
