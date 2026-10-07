@@ -118,7 +118,7 @@ public struct LLMAssistant: AssistantEngine {
                 let text = Self.plainStyle(reply.content ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { throw AssistantError.emptyResponse }
                 if blocks.isEmpty, let suggested { blocks.append(suggested); blocks.append(contentsOf: extras) }
-                return ChatMessage(role: .assistant, text: text, blocks: Self.dedupe(blocks), evidence: Self.dedupe(evidence), toolsUsed: used)
+                return ChatMessage(role: .assistant, text: text, blocks: Self.dedupe(Self.proposalsFirst(blocks)), evidence: Self.dedupe(evidence), toolsUsed: used)
             }
             messages.append(LLMMessage(role: "assistant", content: reply.content, tool_calls: calls))
             for call in calls {
@@ -144,6 +144,16 @@ public struct LLMAssistant: AssistantEngine {
     static func plainStyle(_ text: String) -> String {
         text.replacingOccurrences(of: " \u{2014} ", with: ", ")
             .replacingOccurrences(of: "\u{2014}", with: ", ")
+    }
+
+    /// A proposed body note is the one card the reply tells the person to tap, so it goes first
+    /// and is never cut by the three-card limit.
+    static func proposalsFirst(_ blocks: [AssistantBlock]) -> [AssistantBlock] {
+        func isProposal(_ b: AssistantBlock) -> Bool {
+            if case .bodyNoteProposal = b { return true }
+            return false
+        }
+        return blocks.filter(isProposal) + blocks.filter { !isProposal($0) }
     }
 
     static func dedupe<T: Identifiable>(_ items: [T]) -> [T] {

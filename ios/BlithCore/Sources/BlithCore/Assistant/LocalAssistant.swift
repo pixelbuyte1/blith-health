@@ -14,7 +14,7 @@ public struct LocalAssistant: AssistantEngine {
         let t = q.lowercased()
         func has(_ words: String...) -> Bool { words.contains { t.contains($0) } }
         if has("note", "ankle", "knee", "injur", "hurt", "pain", "sprain", "body") && !has("walk", "step") { return .notes }
-        if isReport(q), BodyRegion.match(in: q) != nil { return .notes }
+        if isReport(q), BodyRegion.match(in: q) != nil, !has("walk", "step") { return .notes }
         if has("readiness", "recovery", "recovered", "ready", "score", "hrv", "heart rate", "resting", "load", "strain", "vitals") { return .readiness }
         if let d = RelativeDates.day(in: t, today: today), d != today, !has("sleep", "slept", "weigh") { return .day(d) }
         if has("sleep", "slept", "bed", "night") { return .sleep }

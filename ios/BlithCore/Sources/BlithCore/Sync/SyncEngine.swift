@@ -96,8 +96,8 @@ public struct SyncEngine: Sendable {
         let today = LocalDate(now(), calendar: calendar)
         let lastDay = h.sync.lastSync.map { LocalDate($0, calendar: calendar) } ?? today.adding(days: -Self.recentWindowDays)
         var start = min(today.adding(days: -2), lastDay.adding(days: -2))
-        // Heart rate was added after some people's first import: read its past year once.
-        if h.daily[.heartRate] == nil { start = min(start, today.adding(days: -365)) }
+        // Daily metrics added after someone's first import (heart rate) have no series yet.
+        let missing = HealthMetric.dailyMetrics.filter { h.daily[$0] == nil }
         start = max(start, today.adding(days: -365 * maxYears))
         // Long gaps are fetched in the same chunk sizes as the initial import.
         var spans: [DateSpan] = []
@@ -110,6 +110,20 @@ public struct SyncEngine: Sendable {
         for (i, span) in spans.enumerated() {
             let batch = try await fetchWithRetry(request(for: span, today: today, isMostRecent: i == 0))
             ingest(batch, span: span, into: &h, today: today)
+        }
+        // Read just those metrics for the past year, once, instead of re-reading everything.
+        if !missing.isEmpty {
+            let oldest = today.adding(days: -365)
+            var back = today
+            while back >= oldest {
+                let s = max(oldest, back.adding(days: -(Self.recentWindowDays - 1)))
+                let span = DateSpan(s, back)
+                let batch = try await fetchWithRetry(ProviderFetch(span: span, metrics: missing, includeHourlySteps: false,
+                                                                   includeSleep: false, includeBody: false,
+                                                                   includeWorkouts: false, includeSources: false))
+                for metric in missing { h.replaceDaily(metric, in: span, with: batch.daily[metric] ?? []) }
+                back = s.adding(days: -1)
+            }
         }
         h.sync.status = .idle
         h.sync.lastSync = now()
