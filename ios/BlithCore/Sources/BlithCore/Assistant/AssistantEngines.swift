@@ -91,6 +91,7 @@ public struct LLMAssistant: AssistantEngine {
     - For a question about one day, call get_day_detail and attach show_widget day_steps (and body_note when a note exists that day).
     - Hard limit: 4 short sentences. Write plain sentences. Never use em dashes; use a full stop or a comma.
     - When the person tells you about an ache, pain, injury or illness of their own (for example "I rolled my right ankle yesterday"), call propose_body_note with the region, a short title in their words and the date. If the place or the side is unclear, ask one short question first ("Left or right ankle?"). Don't explain causes and don't give treatment advice. Say Blith can't assess it, suggest a clinician if it lasts or gets worse, and tell them to tap Add note on the card; nothing is saved until they do. Mention emergency care in one line only if they describe red flags.
+    - A line starting "Tagged:" after the question lists what the person tagged with @ (a body area with its region id, sleep, heart rate or a date). Treat it as what the question is about and pick tools and dates from it.
     - Dates: resolve relative dates ("last Tuesday", "August") from today's date given below, using YYYY-MM-DD in tool calls.
     """
 
