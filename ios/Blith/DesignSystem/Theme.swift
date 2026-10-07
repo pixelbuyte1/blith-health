@@ -27,6 +27,8 @@ enum Palette {
     static let ice = Color(light: 0xD6ECEA, dark: 0xBDE8E5)
     static let deep = Color(light: 0x0A4547, dark: 0x1F4E4C)
     static let cyan = Color(light: 0x0E8A8F, dark: 0x6ED3CF)
+    /// Selection on the 3D body's muscle layer: soft blue, matching the selected-muscle glow.
+    static let anatomy = Color(light: 0x3D5FD6, dark: 0x9DB4FF)
 
     // Physiological palette
     static let sleep = Color(light: 0x4A4FA8, dark: 0x9EA3F2)

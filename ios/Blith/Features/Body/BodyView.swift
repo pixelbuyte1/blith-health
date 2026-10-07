@@ -12,12 +12,19 @@ struct BodyView: View {
     @State private var controller: BodySceneController?
     @State private var layer: BodyLayer = .skin
     @State private var selectedRegion: BodyRegion?
-    @State private var selectedMuscle: String?
+    @State private var selectedMuscle: Body3DModel.Muscle?
     @State private var focusedNoteID: String?
     @State private var scrubDay: Double?
     @State private var editing: HealthEvent?
     @State private var showRegions = false
     @State private var visible = false
+    @State private var showCoach = false
+    @State private var coachPoint: CGPoint?
+    @State private var panelRequest = 0
+    @AppStorage("BlithBodyStyle") private var styleRaw = AnatomyStyle.radiant.rawValue
+    @AppStorage("BlithBodyCoachVisits") private var coachVisits = 0
+
+    var style: AnatomyStyle { AnatomyStyle(rawValue: styleRaw) ?? .radiant }
 
     var history: HealthHistory? { app.history }
     var notes: [HealthEvent] { history?.bodyNotes ?? [] }
@@ -25,39 +32,49 @@ struct BodyView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.l) {
-                    header
-                    stage
-                    regionPanel
-                    timeline
-                    historyList
-                    Text("3D figure and muscles derived from BodyParts3D (© The Database Center for Life Science, CC BY-SA 2.1 JP) and Z-Anatomy (CC BY-SA 4.0). For orientation and notes, not a medical atlas.")
-                        .font(Typo.geist(11, relativeTo: .caption2)).foregroundStyle(Palette.tertiaryInk)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Space.l) {
+                        header
+                        stage
+                        regionPanel.id("bodyPanel")
+                        timeline
+                        historyList
+                        Text("3D figure and muscles derived from BodyParts3D (© The Database Center for Life Science, CC BY-SA 2.1 JP) and Z-Anatomy (CC BY-SA 4.0). For orientation and notes, not a medical atlas.")
+                            .font(Typo.geist(11, relativeTo: .caption2)).foregroundStyle(Palette.tertiaryInk)
+                    }
+                    .padding(.horizontal, Space.page)
+                    .padding(.bottom, Space.section)
+                    .containerRelativeFrame(.horizontal)
                 }
-                .padding(.horizontal, Space.page)
-                .padding(.bottom, Space.section)
-                .containerRelativeFrame(.horizontal)
-            }
-            .scrollIndicators(.hidden)
-            .blithBackground(wash: Palette.signal.opacity(0.14))
-            .toolbar(.hidden, for: .navigationBar)
-            .sheet(item: $editing) { note in
-                BodyNoteEditor(note: note, isNew: !notes.contains { $0.id == note.id }) { saved in
-                    Task { await app.saveNote(saved) }
-                } onDelete: { id in
-                    Task { await app.deleteNote(id: id) }
+                .scrollIndicators(.hidden)
+                .blithBackground(wash: Palette.signal.opacity(0.14))
+                .toolbar(.hidden, for: .navigationBar)
+                .sheet(item: $editing) { note in
+                    BodyNoteEditor(note: note, isNew: !notes.contains { $0.id == note.id }) { saved in
+                        Task { await app.saveNote(saved) }
+                    } onDelete: { id in
+                        Task { await app.deleteNote(id: id) }
+                    }
                 }
+                .sheet(isPresented: $showRegions) { regionList }
+                .onAppear {
+                    visible = true
+                    setUp()
+                    focusFromRouter()
+                    startCoachIfNeeded()
+                }
+                .onDisappear {
+                    visible = false
+                    showCoach = false
+                }
+                .onChange(of: router.bodyFocusNoteID) { _, _ in focusFromRouter() }
+                .onChange(of: markerKey) { _, _ in syncMarkers() }
+                .onChange(of: panelRequest) { _, _ in
+                    withAnimation(Motion.respecting(reduceMotion)) { proxy.scrollTo("bodyPanel", anchor: .top) }
+                }
+                .sensoryFeedback(.selection, trigger: selectedMuscle?.id ?? selectedRegion?.rawValue)
             }
-            .sheet(isPresented: $showRegions) { regionList }
-            .onAppear {
-                visible = true
-                setUp()
-                focusFromRouter()
-            }
-            .onDisappear { visible = false }
-            .onChange(of: router.bodyFocusNoteID) { _, _ in focusFromRouter() }
-            .onChange(of: markerKey) { _, _ in syncMarkers() }
         }
     }
 
@@ -69,7 +86,7 @@ struct BodyView: View {
                     if app.isDemo { SampleDataBanner() }
                 }
                 Text("Body").font(Typo.pageTitle).foregroundStyle(Palette.ink)
-                Text("Drag to turn · pinch to zoom · tap a region").font(Typo.caption).foregroundStyle(Palette.secondaryInk)
+                Text("Drag to turn · pinch to zoom · tap a muscle").font(Typo.caption).foregroundStyle(Palette.secondaryInk)
             }
             Spacer()
             AvatarButton(name: app.profile.name) { router.sheet = .profile }
@@ -93,13 +110,18 @@ struct BodyView: View {
         controller.onSelect = { [weak controller] region, muscle in
             withAnimation(Motion.respecting(reduceMotion, Motion.snappy)) {
                 selectedRegion = region
-                selectedMuscle = muscle?.name
+                selectedMuscle = muscle
                 focusedNoteID = nil
             }
             controller?.highlight(region, muscle: muscle)
         }
         controller.onMarker = { id in if let n = notes.first(where: { $0.id == id }) { focus(n) } }
+        controller.onInteract = {
+            guard showCoach else { return }
+            withAnimation(Motion.respecting(reduceMotion)) { showCoach = false }
+        }
         if let l = UserDefaults.standard.string(forKey: "BlithBodyLayer").flatMap(BodyLayer.init(rawValue:)) { layer = l }
+        controller.setStyle(style)
         controller.setLayer(layer)
         if UserDefaults.standard.object(forKey: "BlithBodyYaw") != nil {
             controller.setYaw(Float(UserDefaults.standard.double(forKey: "BlithBodyYaw")) * .pi / 180, animated: false)
@@ -111,11 +133,21 @@ struct BodyView: View {
         controller?.setMarkers(visibleNotes, focused: focusedNoteID, today: today)
     }
 
+    /// The first three visits show how to use the figure. Any drag, pinch or tap retires the hint for
+    /// that visit; "Got it" retires it for good.
+    func startCoachIfNeeded() {
+        guard controller != nil, coachVisits < 3, !showCoach, !LaunchOptions.isScripted else { return }
+        coachVisits += 1
+        coachPoint = nil
+        withAnimation(Motion.respecting(reduceMotion)) { showCoach = true }
+    }
+
     @ViewBuilder
     var stage: some View {
         ZStack {
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .fill(RadialGradient(colors: [Color(hex: 0x122044), Color(hex: 0x080B10)], center: UnitPoint(x: 0.5, y: 0.42), startRadius: 10, endRadius: 380))
+                .fill(RadialGradient(colors: [BodyChamber.centre, BodyChamber.middle, BodyChamber.edge],
+                                     center: UnitPoint(x: 0.5, y: 0.42), startRadius: 10, endRadius: 380))
             GridBackdrop().opacity(0.5).clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             if let controller {
                 BodySceneView(controller: controller, animate: visible && !reduceMotion && scenePhase == .active)
@@ -126,6 +158,18 @@ struct BodyView: View {
                     .padding()
             }
             controls
+            if showCoach {
+                BodyCoachOverlay(point: coachPoint) {
+                    coachVisits = 3
+                    withAnimation(Motion.respecting(reduceMotion)) { showCoach = false }
+                }
+                .transition(.opacity)
+                .task {
+                    // Wait for the figure to be laid out before placing the tap hint on the chest.
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    coachPoint = controller?.screenPoint(of: .chest)
+                }
+            }
         }
         .frame(height: 540)
         .environment(\.colorScheme, .dark)
@@ -146,7 +190,7 @@ struct BodyView: View {
                             Text(l.title.uppercased()).font(Typo.eyebrow).tracking(1)
                                 .padding(.horizontal, 11).padding(.vertical, 8)
                                 .foregroundStyle(layer == l ? Palette.canvas : Palette.ink)
-                                .background(Capsule().fill(layer == l ? (l == .muscle ? Palette.coral : Palette.cyan) : Color.clear))
+                                .background(Capsule().fill(layer == l ? (l == .muscle ? Palette.anatomy : Palette.cyan) : Color.clear))
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(layer == l ? .isSelected : [])
@@ -155,6 +199,21 @@ struct BodyView: View {
                 .padding(3)
                 .glassSurface(Capsule())
                 Spacer()
+                if layer == .muscle {
+                    Menu {
+                        Picker("Anatomy style", selection: Binding(get: { style }, set: { new in
+                            styleRaw = new.rawValue
+                            controller?.setStyle(new)
+                        })) {
+                            ForEach(AnatomyStyle.allCases) { s in Text(s.title).tag(s) }
+                        }
+                    } label: {
+                        Image(systemName: "circle.lefthalf.filled").font(Typo.geist(15, .semibold, relativeTo: .subheadline)).frame(width: 38, height: 38)
+                    }
+                    .foregroundStyle(Palette.ink)
+                    .glassSurface(Circle(), interactive: true)
+                    .accessibilityLabel("Anatomy style, \(style.title)")
+                }
                 Button { showRegions = true } label: {
                     Image(systemName: "list.bullet").font(Typo.geist(15, .semibold, relativeTo: .subheadline)).frame(width: 38, height: 38)
                 }
@@ -163,6 +222,10 @@ struct BodyView: View {
                 .accessibilityLabel("Body regions list")
             }
             Spacer()
+            if let region = selectedRegion, !showCoach {
+                selectionChip(region)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
             HStack(alignment: .bottom) {
                 HStack(spacing: 2) {
                     viewButton("Front", yaw: 0)
@@ -191,6 +254,57 @@ struct BodyView: View {
             }
         }
         .padding(Space.m)
+    }
+
+    /// The selected part, floating just above the view controls so it's visible without scrolling.
+    /// Tapping it scrolls to the full card with notes.
+    func selectionChip(_ region: BodyRegion) -> some View {
+        Button { panelRequest += 1 } label: {
+            HStack(spacing: Space.m) {
+                BodyPartGlyph(region: glyphRegion(region), size: 24)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Palette.anatomy.opacity(0.14)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectionTitle(region)).font(Typo.cardTitle).foregroundStyle(Palette.ink).lineLimit(1)
+                    Text(chipDetail(region)).font(Typo.caption).foregroundStyle(Palette.secondaryInk).lineLimit(2)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.secondaryInk)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Palette.raised))
+            }
+            .padding(.horizontal, Space.m)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassSurface(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, Space.s)
+        .accessibilityHint("Shows notes and details below")
+    }
+
+    /// The muscle shown in the card: only on the muscle layer.
+    var shownMuscle: Body3DModel.Muscle? { layer == .muscle ? selectedMuscle : nil }
+
+    func glyphRegion(_ region: BodyRegion) -> BodyRegion { shownMuscle?.bodyRegion ?? region }
+
+    func selectionTitle(_ region: BodyRegion) -> String { shownMuscle?.name ?? region.displayName }
+
+    /// "Chest, left side" for a muscle; nil for a region.
+    var muscleWhere: String? {
+        guard let m = shownMuscle else { return nil }
+        let group = MuscleGuide.entry(for: m)?.group ?? m.bodyRegion?.displayName ?? "Muscle"
+        return MuscleGuide.sideLabel(m).map { "\(group), \($0.lowercased())" } ?? group
+    }
+
+    func chipDetail(_ region: BodyRegion) -> String {
+        if let m = shownMuscle {
+            return [muscleWhere, MuscleGuide.entry(for: m)?.action].compactMap { $0 }.joined(separator: " · ")
+        }
+        let count = notes.filter { $0.bodyRegion == region }.count
+        return count == 0 ? "No notes here yet" : "\(count) \(count == 1 ? "note" : "notes") here"
     }
 
     func viewButton(_ title: String, yaw: Float) -> some View {
@@ -234,13 +348,20 @@ struct BodyView: View {
     var regionPanel: some View {
         if let region = selectedRegion {
             let regionNotes = notes.filter { $0.bodyRegion == region }
+            let tint = layer == .muscle ? Palette.anatomy : Palette.cyan
             VStack(alignment: .leading, spacing: Space.m) {
-                HStack(alignment: .top) {
+                HStack(alignment: .top, spacing: Space.m) {
+                    BodyPartGlyph(region: glyphRegion(region), size: 28, accent: tint)
+                        .frame(width: 46, height: 46)
+                        .background(Circle().fill(Palette.raised))
                     VStack(alignment: .leading, spacing: 3) {
-                        Eyebrow(text: layer == .muscle && selectedMuscle != nil ? "Muscle · \(region.displayName)" : "Region", icon: "bl.bodynote",
-                                color: layer == .muscle ? Palette.coral : Palette.cyan)
-                        Text(layer == .muscle ? (selectedMuscle ?? region.displayName) : region.displayName)
+                        Eyebrow(text: shownMuscle != nil ? "Muscle · \(region.displayName)" : "Region", color: tint)
+                        Text(selectionTitle(region))
                             .font(Typo.title).foregroundStyle(Palette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let muscleWhere {
+                            Text(muscleWhere).font(Typo.caption).foregroundStyle(Palette.secondaryInk)
+                        }
                     }
                     Spacer()
                     Button {
@@ -253,6 +374,13 @@ struct BodyView: View {
                             .frame(width: 30, height: 30).background(Circle().fill(Palette.raised))
                     }
                     .accessibilityLabel("Close region")
+                }
+                if let m = shownMuscle, let action = MuscleGuide.entry(for: m)?.action {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Eyebrow(text: "What it does")
+                        Text(action).font(Typo.body).foregroundStyle(Palette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if regionNotes.isEmpty {
                     Text("No notes here yet.").font(Typo.geist(15, relativeTo: .subheadline)).foregroundStyle(Palette.secondaryInk)
@@ -276,7 +404,7 @@ struct BodyView: View {
                     }
                 }
             }
-            .card(tone: .tinted(layer == .muscle ? Palette.coral : Palette.cyan))
+            .card(tone: .tinted(tint))
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }

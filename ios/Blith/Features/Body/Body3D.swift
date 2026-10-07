@@ -158,6 +158,24 @@ enum BodyLayer: String, CaseIterable, Identifiable {
     var title: String { self == .skin ? "Figure" : "Muscles" }
 }
 
+/// How much anatomy the muscle layer shows. Soft radiant is the default; Minimal glow flattens the
+/// tone between muscles for people who want less detail.
+enum AnatomyStyle: String, CaseIterable, Identifiable {
+    case radiant, minimal
+    var id: String { rawValue }
+    var title: String { self == .radiant ? "Soft radiant" : "Minimal glow" }
+    /// The shader's `detail` value: 1 keeps muscle borders and tone variation, 0 flattens them.
+    var detail: Float { self == .radiant ? 1 : 0 }
+    var occlusion: CGFloat { self == .radiant ? 0.6 : 0.28 }
+}
+
+/// The dark imaging chamber the figure stands in (the documented hex exception, like the lighting).
+enum BodyChamber {
+    static let centre = Color(hex: 0x0C1C2B)
+    static let middle = Color(hex: 0x091827)
+    static let edge = Color(hex: 0x07111C)
+}
+
 /// Owns the SceneKit scene and all camera moves. Rotation is a turntable around the body's
 /// vertical axis; zoom moves the camera toward a target point on the body.
 @MainActor
@@ -169,6 +187,8 @@ final class BodySceneController: NSObject {
     let skinNode: SCNNode
     /// Anatomical muscles (muscle layer). Only the node of the current layer is visible.
     let muscleNode: SCNNode
+    /// The skin's smooth head, shown on the muscle layer instead of exposed facial muscles.
+    let headNode: SCNNode
     let cameraNode = SCNNode()
     let rig = SCNNode()
     let keyLight = SCNNode()
@@ -181,10 +201,25 @@ final class BodySceneController: NSObject {
     private var target = SCNVector3(0, 0.93, 0)
     private var skinMaterials: [SCNMaterial] = []
     private var muscleMaterials: [SCNMaterial] = []
+    private var headMaterial = SCNMaterial()
+    /// Muscle-layer elements that are never drawn (the facial muscles under the smooth head).
+    private var hiddenGroups = Set<Int>()
+    private var muscleState: [MaterialState] = []
+    private var headState = MaterialState()
+    private(set) var style: AnatomyStyle = .radiant
     private let ambientLight = SCNLight()
     private let rimLight = SCNLight()
     var onSelect: ((BodyRegion, Body3DModel.Muscle?) -> Void)?
     var onMarker: ((String) -> Void)?
+    /// Any drag, pinch or tap on the figure (used to retire the first-visit hints).
+    var onInteract: (() -> Void)?
+
+    /// Shader state of one muscle-layer element; see `anatomyShader`.
+    struct MaterialState: Equatable {
+        var highlight: Float = 0
+        var press: Float = 0
+        var dim: Float = 0
+    }
 
     static let fullDistance: Float = 3.9
     static let fullTarget = SCNVector3(0, 0.93, 0)
@@ -193,6 +228,7 @@ final class BodySceneController: NSObject {
         self.model = model
         skinNode = SCNNode(geometry: model.skin.geometry.copy() as? SCNGeometry)
         muscleNode = SCNNode(geometry: model.muscle.geometry.copy() as? SCNGeometry)
+        headNode = SCNNode(geometry: BodySceneController.headGeometry(model))
         super.init()
         build()
     }
@@ -200,14 +236,26 @@ final class BodySceneController: NSObject {
     private func build() {
         scene.background.contents = UIColor.clear
         skinMaterials = model.skin.groups.map { _ in Self.skinMaterial() }
-        muscleMaterials = model.muscle.groups.map { group in
-            guard let m = group.muscle, model.meta.muscles.indices.contains(m) else { return Self.muscleMaterial(color: Self.underlayerColor) }
-            return Self.muscleMaterial(color: Self.tone(for: model.meta.muscles[m]))
+        let head = headNode.geometry == nil ? nil : model.regionIndex(.head)
+        muscleMaterials = model.muscle.groups.enumerated().map { i, group in
+            if let head, group.region == head {
+                hiddenGroups.insert(i)
+                return Self.hiddenMaterial()
+            }
+            guard let m = group.muscle, model.meta.muscles.indices.contains(m) else {
+                return Self.anatomyMaterial(base: Self.underlayer, vary: 0)
+            }
+            let muscle = model.meta.muscles[m]
+            return Self.anatomyMaterial(base: muscle.kind == "tendon" ? Self.tendon : Self.ivory, vary: Self.variation(for: muscle))
         }
+        muscleState = Array(repeating: MaterialState(), count: muscleMaterials.count)
+        headMaterial = Self.anatomyMaterial(base: Self.ivory, vary: 0)
         skinNode.geometry?.materials = skinMaterials
         muscleNode.geometry?.materials = muscleMaterials
+        headNode.geometry?.materials = [headMaterial]
         turntable.addChildNode(skinNode)
         turntable.addChildNode(muscleNode)
+        turntable.addChildNode(headNode)
         turntable.addChildNode(markers)
         scene.rootNode.addChildNode(turntable)
         scene.rootNode.addChildNode(floorNode())
@@ -275,36 +323,86 @@ final class BodySceneController: NSObject {
         return m
     }
 
-    static let tendonColor = UIColor(hex: 0x93403F)
-    static let underlayerColor = UIColor(hex: 0x74191E)
+    // MARK: Soft radiant anatomy
 
-    /// Deep tissue red (#9C2328) with a small, stable per-muscle variation so neighbours separate.
-    static func tone(for muscle: Body3DModel.Muscle) -> UIColor {
-        if muscle.kind == "tendon" { return tendonColor }
+    /// Warm ivory resin rather than exposed tissue; tendons a touch paler, the underlayer (seen only
+    /// in the gaps between muscles) a touch deeper.
+    static let ivory = UIColor(hex: 0xDCBDA9)
+    static let tendon = UIColor(hex: 0xE8DCD1)
+    static let underlayer = UIColor(hex: 0xBC9C89)
+
+    /// A stable value in -1...1 per muscle name, so neighbouring muscles differ by a few percent of tone.
+    static func variation(for muscle: Body3DModel.Muscle) -> Float {
         var h: UInt32 = 2_166_136_261
         for b in muscle.name.utf8 { h = (h ^ UInt32(b)) &* 16_777_619 }
-        let k = 0.93 + CGFloat(h % 1000) / 1000 * 0.14
-        return UIColor(red: min(1, 0.612 * k), green: 0.137 * k, blue: 0.157 * k, alpha: 1)
+        return Float(h % 2001) / 1000 - 1
     }
 
-    static func muscleMaterial(color: UIColor) -> SCNMaterial {
+    /// Every muscle shares this shader (compiled once); its state is a handful of uniforms:
+    /// `highlight` selected (soft blue core, lavender toward the edge, a faint cyan light inside),
+    /// `press` touched or in the chosen region (pale blue edge only), `dim` something else is
+    /// selected, `detail` 1 for Soft radiant and 0 for Minimal glow, `vary` the per-muscle tone.
+    /// Lit colour is pulled toward the base colour so the figure reads as frosted resin, with a cool
+    /// rim and a little warmth where the surface turns away, like light passing through.
+    static let anatomyShader = """
+    #pragma arguments
+    float highlight;
+    float press;
+    float dim;
+    float detail;
+    float vary;
+    #pragma body
+    float3 srN = normalize(_surface.normal);
+    float3 srV = normalize(-_surface.position);
+    float srNdv = saturate(dot(srN, srV));
+    float srF = pow(1.0 - srNdv, 2.4);
+    float3 srCol = mix(_output.color.rgb, _surface.diffuse.rgb * (0.78 + 0.22 * srNdv), (0.56 - 0.24 * detail));
+    srCol *= 1.0 + vary * (0.012 + 0.038 * detail);
+    srCol += float3(0.30, 0.16, 0.10) * pow(1.0 - srNdv, 1.5) * 0.12;
+    srCol += float3(0.62, 0.76, 1.0) * srF * (0.10 + 0.06 * detail);
+    float srLit = saturate(highlight + press);
+    float srLum = dot(srCol, float3(0.2126, 0.7152, 0.0722));
+    srCol = mix(srCol, mix(float3(srLum), srCol, 0.7) * 0.7, dim * (1.0 - srLit));
+    float3 srTint = mix(float3(0.10, 0.26, 1.0), float3(0.33, 0.26, 1.0), srF);
+    srCol = mix(srCol, srTint * (0.42 + 0.40 * srNdv), saturate(highlight) * 0.8);
+    srCol += float3(0.08, 0.48, 1.0) * pow(srNdv, 3.0) * 0.20 * highlight;
+    srCol += float3(0.52, 0.72, 1.0) * srF * (0.60 * highlight + 0.55 * press);
+    _output.color.rgb = srCol;
+    """
+
+    static func anatomyMaterial(base: UIColor, vary: Float) -> SCNMaterial {
         let m = SCNMaterial()
         m.lightingModel = .blinn
-        m.diffuse.contents = color
-        m.specular.contents = UIColor(white: 0.2, alpha: 1)
-        m.shininess = 0.3
+        m.diffuse.contents = base
+        m.specular.contents = UIColor(white: 0.14, alpha: 1)
+        m.shininess = 0.22
         m.setValue(Float(0), forKey: "highlight")
-        m.shaderModifiers = [
-            .fragment: """
-            #pragma arguments
-            float highlight;
-            #pragma body
-            \(fresnel)
-            _output.color.rgb += float3(1.0, 0.42, 0.36) * f * 0.16;
-            _output.color.rgb += (_output.color.rgb * 0.22 + float3(0.49, 0.70, 1.0) * f * 0.35) * highlight;
-            """,
-        ]
+        m.setValue(Float(0), forKey: "press")
+        m.setValue(Float(0), forKey: "dim")
+        m.setValue(Float(1), forKey: "detail")
+        m.setValue(vary, forKey: "vary")
+        m.shaderModifiers = [.fragment: anatomyShader]
         return m
+    }
+
+    /// Draws nothing; keeps an element (and every index after it) without showing it.
+    static func hiddenMaterial() -> SCNMaterial {
+        let m = SCNMaterial()
+        m.lightingModel = .constant
+        m.colorBufferWriteMask = []
+        m.writesToDepthBuffer = false
+        return m
+    }
+
+    /// The skin layer's head elements on their own: a smooth, mannequin-like head for the muscle layer.
+    static func headGeometry(_ model: Body3DModel) -> SCNGeometry? {
+        guard let head = model.regionIndex(.head) else { return nil }
+        let source = model.skin.geometry
+        let elements = model.skin.groups.indices
+            .filter { model.skin.groups[$0].region == head && $0 < source.elements.count }
+            .map { source.elements[$0] }
+        guard !elements.isEmpty else { return nil }
+        return SCNGeometry(sources: source.sources, elements: elements)
     }
 
     func floorNode() -> SCNNode {
@@ -341,39 +439,94 @@ final class BodySceneController: NSObject {
         self.layer = layer
         skinNode.isHidden = layer != .skin
         muscleNode.isHidden = layer != .muscle
+        headNode.isHidden = layer != .muscle
+        let camera = cameraNode.camera
         if layer == .skin {
             ambientLight.intensity = 260
             ambientLight.color = UIColor(hex: 0x9FB4FF)
             rimLight.intensity = 500
             rimLight.color = UIColor(hex: 0x3DDCFF)
-            cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = 0
-            cameraNode.camera?.bloomIntensity = 0.55
-            cameraNode.camera?.bloomThreshold = 0.6
+            camera?.screenSpaceAmbientOcclusionIntensity = 0
+            camera?.bloomIntensity = 0.55
+            camera?.bloomThreshold = 0.6
         } else {
-            ambientLight.intensity = 300
-            ambientLight.color = UIColor(hex: 0xFFE9E4)
-            rimLight.intensity = 380
-            rimLight.color = UIColor(hex: 0xFFC2B8)
-            cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = 0.9
-            // Less bloom on the muscles: no red halo around the figure.
-            cameraNode.camera?.bloomIntensity = 0.2
-            cameraNode.camera?.bloomThreshold = 0.85
+            // Even, soft light so the anatomy reads as frosted resin. Bloom is nearly off: only the
+            // selected muscle's edge catches a little of it.
+            ambientLight.intensity = 340
+            ambientLight.color = UIColor(hex: 0xFFF1E8)
+            rimLight.intensity = 460
+            rimLight.color = UIColor(hex: 0xCFE0FF)
+            camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion
+            camera?.bloomIntensity = 0.18
+            camera?.bloomThreshold = 0.92
         }
     }
 
-    /// Highlights a region on both layers. On the muscle layer a given muscle is highlighted on its
-    /// own; without one, the region's underlayer and the muscles that mostly lie in it light up.
+    func setStyle(_ style: AnatomyStyle) {
+        self.style = style
+        for m in muscleMaterials + [headMaterial] { m.setValue(style.detail, forKey: "detail") }
+        if layer == .muscle { cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion }
+    }
+
+    /// Selection states. Figure layer: the region glows. Muscle layer: a chosen muscle turns radiant
+    /// blue and everything else dims a little; a region without a muscle lights the edges of its
+    /// muscles (the touch state). Nothing selected is the calm resting state.
     func highlight(_ region: BodyRegion?, muscle: Body3DModel.Muscle? = nil) {
-        for m in skinMaterials + muscleMaterials { m.setValue(Float(0), forKey: "highlight") }
         let r = region.flatMap(model.regionIndex)
-        if let r {
-            for (i, g) in model.skin.groups.enumerated() where g.region == r { skinMaterials[i].setValue(Float(1), forKey: "highlight") }
+        for (i, g) in model.skin.groups.enumerated() {
+            skinMaterials[i].setValue(r != nil && g.region == r ? Float(1) : Float(0), forKey: "highlight")
         }
-        if let muscle, let mi = model.muscleIndex(muscle) {
-            for (i, g) in model.muscle.groups.enumerated() where g.muscle == mi { muscleMaterials[i].setValue(Float(1), forKey: "highlight") }
-        } else if let r {
-            for (i, g) in model.muscle.groups.enumerated() where g.region == r { muscleMaterials[i].setValue(Float(1), forKey: "highlight") }
+        let mi = muscle.flatMap(model.muscleIndex)
+        let headOnly = mi == nil && region == .head && headNode.geometry != nil
+        let active = r != nil || mi != nil
+        for (i, g) in model.muscle.groups.enumerated() where !hiddenGroups.contains(i) {
+            var next = MaterialState()
+            if let mi {
+                next.highlight = g.muscle == mi ? 1 : 0
+            } else if let r, !headOnly {
+                next.press = g.region == r ? 1 : 0
+            }
+            next.dim = active && next.highlight + next.press == 0 ? 1 : 0
+            Self.transition(muscleMaterials[i], from: muscleState[i], to: next)
+            muscleState[i] = next
         }
+        var head = MaterialState()
+        head.highlight = headOnly ? 1 : 0
+        head.dim = active && !headOnly ? 1 : 0
+        Self.transition(headMaterial, from: headState, to: head)
+        headState = head
+    }
+
+    static func transition(_ m: SCNMaterial, from old: MaterialState, to new: MaterialState) {
+        guard old != new else { return }
+        animate(m, "highlight", from: old.highlight, to: new.highlight, swell: new.highlight > old.highlight)
+        animate(m, "press", from: old.press, to: new.press)
+        animate(m, "dim", from: old.dim, to: new.dim)
+    }
+
+    /// Eases a shader uniform to its new value over about 300 ms. A newly selected muscle swells once
+    /// and settles, then holds steady (no repeating glow). Reduce Motion sets values directly.
+    static func animate(_ m: SCNMaterial, _ key: String, from old: Float, to value: Float, swell: Bool = false) {
+        guard old != value else { return }
+        m.setValue(value, forKey: key)
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let animation: CAAnimation
+        if swell {
+            let k = CAKeyframeAnimation(keyPath: key)
+            k.values = [old, value * 1.2, value]
+            k.keyTimes = [0, 0.5, 1]
+            k.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeInEaseOut)]
+            k.duration = 0.36
+            animation = k
+        } else {
+            let b = CABasicAnimation(keyPath: key)
+            b.fromValue = old
+            b.toValue = value
+            b.duration = 0.28
+            b.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation = b
+        }
+        m.addAnimation(animation, forKey: key)
     }
 
     // MARK: Camera
@@ -392,6 +545,13 @@ final class BodySceneController: NSObject {
     func rotate(by delta: Float) {
         yaw += delta
         turntable.eulerAngles.y = yaw
+    }
+
+    /// Front, side and back are slightly magnetic: a turn that ends within about 11° of one settles there.
+    static func snapped(_ yaw: Float) -> Float {
+        let quarter = Float.pi / 2
+        let nearest = (yaw / quarter).rounded() * quarter
+        return abs(yaw - nearest) < 0.2 ? nearest : yaw
     }
 
     func setYaw(_ value: Float, animated: Bool = true) {
@@ -430,6 +590,13 @@ final class BodySceneController: NSObject {
         distance = max(1.35, min(2.6, info.radius * 9))
         highlight(region)
         applyCamera(animated: animated, duration: 0.9)
+    }
+
+    /// Where a region's anchor appears in the view, for overlays such as the first-visit hints.
+    func screenPoint(of region: BodyRegion) -> CGPoint? {
+        guard let view, view.bounds.width > 0, let info = model.info(for: region) else { return nil }
+        let p = view.projectPoint(turntable.convertPosition(info.anchor.vector, to: nil))
+        return CGPoint(x: CGFloat(p.x), y: CGFloat(p.y))
     }
 
     // MARK: Markers
@@ -551,9 +718,18 @@ final class BodySceneController: NSObject {
                 node = n.parent
             }
         }
-        guard let hit = hits.first(where: { $0.node === skinNode || $0.node === muscleNode }) else { return }
+        guard let hit = hits.first(where: { $0.node === skinNode || $0.node === muscleNode || $0.node === headNode }) else { return }
+        if hit.node === headNode {
+            onSelect?(.head, nil)
+            return
+        }
         let layerData = hit.node === muscleNode ? model.muscle : model.skin
         guard let picked = model.lookup(layerData, element: hit.geometryIndex, face: hit.faceIndex) else { return }
+        // On the muscle layer the face is the smooth head; its muscles are never picked on their own.
+        if hit.node === muscleNode, headNode.geometry != nil, picked.0 == .head || picked.1?.bodyRegion == .head {
+            onSelect?(.head, nil)
+            return
+        }
         onSelect?(picked.0, picked.1)
     }
 }
@@ -573,7 +749,7 @@ struct BodySceneView: UIViewRepresentable {
         v.preferredFramesPerSecond = 60
         v.isPlaying = true
         v.rendersContinuously = animate
-        v.accessibilityLabel = "3D body. Drag sideways to turn, pinch to zoom, tap a region."
+        v.accessibilityLabel = "3D body. Drag sideways to turn, pinch to zoom, tap a muscle or region."
         controller.view = v
 
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
@@ -597,21 +773,24 @@ struct BodySceneView: UIViewRepresentable {
         init(controller: BodySceneController) { self.controller = controller }
 
         @objc func pan(_ g: UIPanGestureRecognizer) {
+            if g.state == .began { controller.onInteract?() }
             let dx = Float(g.translation(in: g.view).x)
             g.setTranslation(.zero, in: g.view)
             controller.rotate(by: dx * 0.011)
             if g.state == .ended {
                 let v = Float(g.velocity(in: g.view).x) * 0.0022
-                controller.setYaw(controller.yaw + max(-2.5, min(2.5, v)))
+                controller.setYaw(BodySceneController.snapped(controller.yaw + max(-2.5, min(2.5, v))))
             }
         }
 
         @objc func pinch(_ g: UIPinchGestureRecognizer) {
+            if g.state == .began { controller.onInteract?() }
             controller.zoom(by: Float(g.scale))
             g.scale = 1
         }
 
         @objc func tap(_ g: UITapGestureRecognizer) {
+            controller.onInteract?()
             controller.handleTap(at: g.location(in: g.view))
         }
 
