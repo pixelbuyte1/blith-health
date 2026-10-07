@@ -147,14 +147,14 @@ private struct SleepContent: View {
                         .minimumScaleFactor(0.7)
                     Text(status)
                         .font(Typo.geist(15, .semibold, relativeTo: .subheadline))
-                        .foregroundStyle(Palette.secondaryInk)
+                        .foregroundStyle(Palette.sleep)
                 }
             }
             HoursVsNeedBar(asleep: p.asleep, need: p.need)
             HStack(alignment: .top, spacing: Space.l) {
                 heroStat("Sleep score", "\(p.score)", Palette.sleep)
                 heroStat("Personal need", Fmt.duration(p.need), Palette.ink)
-                heroStat("7-night debt", p.debt < 600 ? "None" : Fmt.duration(p.debt), Palette.ink)
+                heroStat("7-night debt", p.debt < 600 ? "None" : Fmt.duration(p.debt), p.debt > 3 * 3600 ? Palette.amber : Palette.ink)
             }
             .accessibilityElement(children: .combine)
             Text(sentence(p)).font(Typo.story).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
