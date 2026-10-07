@@ -87,6 +87,10 @@ private struct SleepContent: View {
 
     var nightPicker: some View {
         let need = engine.sleep(on: date)?.need
+        // One scale for every bar and the need line, set by the longest night, so a very long
+        // night shrinks the others instead of growing out of the card.
+        let longest = max(nights.map(\.asleepDuration).max() ?? 0, need ?? 0, 3600)
+        let perHour = 72 / CGFloat(longest / 3600)
         return HStack(alignment: .bottom, spacing: 6) {
             ForEach(nights) { n in
                 let isSel = n.date == date
@@ -96,7 +100,7 @@ private struct SleepContent: View {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(isSel ? AnyShapeStyle(LinearGradient(colors: [Palette.sleepREM, Palette.sleep], startPoint: .top, endPoint: .bottom))
                                         : AnyShapeStyle(Palette.sleep.opacity(0.22 + 0.33 * Double(score ?? 0) / 100)))
-                            .frame(height: max(10, CGFloat(n.asleepDuration / 3600) * 9))
+                            .frame(height: max(10, CGFloat(n.asleepDuration / 3600) * perHour))
                         Text(String(Fmt.weekdayShort[n.date.weekday - 1].prefix(1))).font(Typo.eyebrow)
                             .foregroundStyle(isSel ? Palette.ink : Palette.tertiaryInk)
                     }
@@ -109,15 +113,15 @@ private struct SleepContent: View {
         }
         .frame(height: 100, alignment: .bottom)
         .overlay(alignment: .bottom) {
-            // Your personal need, as a dashed line across every night (bars grow 9 pt per hour).
+            // Your personal need, as a dashed line across every night, on the bars' scale.
             if let need {
                 ZStack(alignment: .trailing) {
                     Rectangle().fill(.clear).frame(height: 1)
                         .overlay(Line().stroke(Palette.ink.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
-                    Text("NEED \(Fmt.duration(need))").font(Typo.mono(9, .medium)).foregroundStyle(Palette.secondaryInk)
+                    Text("NEED \(Fmt.duration(need))").font(Typo.mono(11, .medium)).foregroundStyle(Palette.secondaryInk)
                         .padding(.horizontal, 4).background(Palette.surface).offset(y: -9)
                 }
-                .padding(.bottom, 17 + CGFloat(need / 3600) * 9)
+                .padding(.bottom, 17 + CGFloat(need / 3600) * perHour)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
             }
@@ -127,18 +131,32 @@ private struct SleepContent: View {
 
     // MARK: Hero
 
+    /// Blith 2.0: one big number with a word and a glyph, then a bar against your need. No dial.
     func hero(_ p: SleepPerformance) -> some View {
-        VStack(alignment: .leading, spacing: Space.l) {
+        let diff = p.asleep - p.need
+        let status = abs(diff) < 15 * 60 ? "■ About your need" : diff > 0 ? "▲ Above your need" : "▼ Below your need"
+        return VStack(alignment: .leading, spacing: Space.l) {
             Eyebrow(text: "Night ending \(Fmt.dayLabel(p.date))", color: Palette.secondaryInk)
-            HStack(spacing: Space.l) {
-                ScoreDial(fraction: Double(p.score) / 100, valueText: "\(p.score)", unit: "%", label: "Sleep", color: Palette.sleep, size: 132)
-                VStack(alignment: .leading, spacing: Space.m) {
-                    heroStat("Hours asleep", Fmt.duration(p.asleep), Palette.ink)
-                    heroStat("Personal need", Fmt.duration(p.need), Palette.sleep)
-                    heroStat("7-night debt", p.debt < 600 ? "None" : Fmt.duration(p.debt), p.debt > 3 * 3600 ? Palette.amber : Palette.ink)
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("ASLEEP").font(Typo.eyebrow).tracking(0.8).foregroundStyle(Palette.tertiaryInk)
+                HStack(alignment: .firstTextBaseline, spacing: Space.m) {
+                    Text(Fmt.duration(p.asleep))
+                        .font(Typo.score(56, weight: .regular))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(status)
+                        .font(Typo.geist(15, .semibold, relativeTo: .subheadline))
+                        .foregroundStyle(Palette.secondaryInk)
                 }
             }
             HoursVsNeedBar(asleep: p.asleep, need: p.need)
+            HStack(alignment: .top, spacing: Space.l) {
+                heroStat("Sleep score", "\(p.score)", Palette.sleep)
+                heroStat("Personal need", Fmt.duration(p.need), Palette.ink)
+                heroStat("7-night debt", p.debt < 600 ? "None" : Fmt.duration(p.debt), Palette.ink)
+            }
+            .accessibilityElement(children: .combine)
             Text(sentence(p)).font(Typo.story).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
         }
         .card(padding: Space.xl, tone: .tinted(Palette.sleep))
@@ -147,8 +165,11 @@ private struct SleepContent: View {
     func heroStat(_ title: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title.uppercased()).font(Typo.eyebrow).tracking(0.8).foregroundStyle(Palette.tertiaryInk)
-            Text(value).font(Typo.score(28, weight: .regular)).foregroundStyle(color)
+            Text(value).font(Typo.score(24, weight: .regular)).foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func sentence(_ p: SleepPerformance) -> String {
