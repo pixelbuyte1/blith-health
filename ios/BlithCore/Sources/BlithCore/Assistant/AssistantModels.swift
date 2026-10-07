@@ -16,9 +16,11 @@ public struct ChatMessage: Identifiable, Codable, Hashable, Sendable {
     public var isError: Bool
     /// Answered by the on-device assistant rather than the AI provider.
     public var isLocal: Bool
+    /// The Blith model that wrote an AI answer ("Quick" or "Deep"); nil for older chats and local answers.
+    public var modelName: String?
 
     public init(id: UUID = UUID(), role: Role, text: String, blocks: [AssistantBlock] = [], evidence: [EvidenceItem] = [],
-                toolsUsed: [String] = [], createdAt: Date = Date(), isError: Bool = false, isLocal: Bool = false) {
+                toolsUsed: [String] = [], createdAt: Date = Date(), isError: Bool = false, isLocal: Bool = false, modelName: String? = nil) {
         self.id = id
         self.role = role
         self.text = text
@@ -28,6 +30,7 @@ public struct ChatMessage: Identifiable, Codable, Hashable, Sendable {
         self.createdAt = createdAt
         self.isError = isError
         self.isLocal = isLocal
+        self.modelName = modelName
     }
 }
 

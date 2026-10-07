@@ -2,6 +2,7 @@
 // checkout still builds; Ask then answers on-device until a key is configured.
 // Copy Secrets.example.xcconfig → Secrets.xcconfig to use the AI assistant locally.
 OPENROUTER_MODEL = openai/gpt-6-luna
+OPENROUTER_MODEL_QUICK = anthropic/claude-haiku-4.5
 PRIVACY_POLICY_URL = https:/$()/github.com/pixelbuyte/blith-health/blob/main/docs/PRIVACY.md
 OPENROUTER_API_KEY =
 DEVELOPMENT_TEAM =

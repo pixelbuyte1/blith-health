@@ -13,6 +13,8 @@ enum AppConfig {
 
     static var openRouterKey: String? { Keychain.read("openrouter.apiKey") ?? plist("OPENROUTER_API_KEY") }
     static var model: String { plist("OPENROUTER_MODEL") ?? OpenRouterClient.defaultModel }
+    /// The fast model behind "Quick". The default ("Deep") stays `model`.
+    static var quickModel: String { plist("OPENROUTER_MODEL_QUICK") ?? "anthropic/claude-haiku-4.5" }
     static var aiConfigured: Bool { openRouterKey != nil }
     static var privacyPolicyURL: URL {
         URL(string: plist("PRIVACY_POLICY_URL") ?? "https://github.com/pixelbuyte/blith-health/blob/main/docs/PRIVACY.md")!
