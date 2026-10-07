@@ -57,6 +57,47 @@ public enum BodyRegion: String, Codable, CaseIterable, Sendable, Identifiable {
         }
     }
 
+    /// A region given as its id ("rightAnkle") or its name ("Right ankle").
+    public static func named(_ name: String) -> BodyRegion? {
+        let n = name.trimmingCharacters(in: .whitespaces)
+        return BodyRegion(rawValue: n) ?? allCases.first { $0.displayName.caseInsensitiveCompare(n) == .orderedSame }
+    }
+
+    /// A body part found in someone's own words: a region, or a part that needs a side first.
+    public enum Match: Equatable, Sendable {
+        case region(BodyRegion)
+        /// The part was named without "left" or "right" next to it, e.g. "knee".
+        case needsSide(String)
+    }
+
+    static let sidedParts: [(word: String, left: BodyRegion, right: BodyRegion)] = [
+        ("upper arm", .leftUpperArm, .rightUpperArm), ("forearm", .leftForearm, .rightForearm),
+        ("shoulder", .leftShoulder, .rightShoulder), ("elbow", .leftElbow, .rightElbow), ("wrist", .leftWrist, .rightWrist),
+        ("hand", .leftHand, .rightHand), ("hip", .leftHip, .rightHip), ("thigh", .leftThigh, .rightThigh),
+        ("knee", .leftKnee, .rightKnee), ("shin", .leftShin, .rightShin), ("calf", .leftCalf, .rightCalf),
+        ("ankle", .leftAnkle, .rightAnkle), ("foot", .leftFoot, .rightFoot),
+    ]
+
+    static let unsidedParts: [(word: String, region: BodyRegion)] = [
+        ("lower back", .lowerBack), ("upper back", .upperBack), ("my back", .lowerBack), ("neck", .neck),
+        ("headache", .head), ("head", .head), ("stomach", .abdomen), ("abdomen", .abdomen), ("belly", .abdomen),
+        ("chest", .chest), ("hips", .hips),
+    ]
+
+    /// The first body part named in `text`. A sided part counts only with "left" or "right" right before it,
+    /// so "right now my knee hurts" asks for the side rather than guessing.
+    public static func match(in text: String) -> Match? {
+        let t = text.lowercased()
+        func found(_ phrase: String) -> Bool { t.range(of: "\\b\(phrase)\\b", options: .regularExpression) != nil }
+        for part in sidedParts where found(part.word) {
+            let left = found("left \(part.word)"), right = found("right \(part.word)")
+            if left != right { return .region(left ? part.left : part.right) }
+            return .needsSide(part.word)
+        }
+        for part in unsidedParts where found(part.word) { return .region(part.region) }
+        return nil
+    }
+
     /// Whether the region is part of the legs/feet, where notes plausibly relate to walking.
     public var isLowerLimb: Bool {
         switch self {

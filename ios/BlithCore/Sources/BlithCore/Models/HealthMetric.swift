@@ -20,6 +20,8 @@ public enum HealthMetric: String, Codable, CaseIterable, Sendable, CodingKeyRepr
     // Heart
     case restingHeartRate
     case walkingHeartRate
+    /// Every heart rate reading in a day: the daily mean, with the day's lowest and highest in min/max.
+    case heartRate
     case hrv
     // Vitals
     case respiratoryRate
@@ -47,7 +49,7 @@ public enum HealthMetric: String, Codable, CaseIterable, Sendable, CodingKeyRepr
              .walkingSpeed, .walkingStepLength, .walkingAsymmetry, .walkingDoubleSupport:
             .movement
         case .weight, .bodyFat: .body
-        case .restingHeartRate, .walkingHeartRate, .hrv, .respiratoryRate, .oxygenSaturation, .wristTemperature, .vo2Max: .heart
+        case .restingHeartRate, .walkingHeartRate, .heartRate, .hrv, .respiratoryRate, .oxygenSaturation, .wristTemperature, .vo2Max: .heart
         case .sleepDuration: .sleep
         }
     }
@@ -62,7 +64,7 @@ public enum HealthMetric: String, Codable, CaseIterable, Sendable, CodingKeyRepr
         case .walkingSpeed: "m/s"
         case .walkingAsymmetry, .walkingDoubleSupport, .bodyFat: "fraction"
         case .weight: "kg"
-        case .restingHeartRate, .walkingHeartRate: "bpm"
+        case .restingHeartRate, .walkingHeartRate, .heartRate: "bpm"
         case .hrv: "ms"
         case .respiratoryRate: "breaths/min"
         case .oxygenSaturation: "fraction"
@@ -87,6 +89,7 @@ public enum HealthMetric: String, Codable, CaseIterable, Sendable, CodingKeyRepr
         case .bodyFat: "Body fat"
         case .restingHeartRate: "Resting heart rate"
         case .walkingHeartRate: "Walking heart rate"
+        case .heartRate: "Heart rate"
         case .hrv: "Heart rate variability"
         case .respiratoryRate: "Respiratory rate"
         case .oxygenSaturation: "Blood oxygen"
@@ -110,7 +113,7 @@ public enum HealthMetric: String, Codable, CaseIterable, Sendable, CodingKeyRepr
     public static let dailyMetrics: [HealthMetric] = [
         .steps, .distanceWalkingRunning, .activeEnergy, .exerciseMinutes, .flightsClimbed,
         .walkingSpeed, .walkingStepLength, .walkingAsymmetry, .walkingDoubleSupport,
-        .restingHeartRate, .walkingHeartRate, .hrv,
+        .restingHeartRate, .walkingHeartRate, .heartRate, .hrv,
         .respiratoryRate, .oxygenSaturation, .wristTemperature, .vo2Max,
     ]
 }

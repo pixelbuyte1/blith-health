@@ -32,7 +32,7 @@ public struct ToolOutput: Sendable {
 }
 
 /// The deterministic query layer the assistant calls. Every number an answer contains comes
-/// from here — the model explains, it never computes.
+/// from here or from `calculate` — the model explains, it never does sums itself.
 public struct HealthAssistantTools: Sendable {
     public let snapshot: HealthSnapshot
 
@@ -51,6 +51,8 @@ public struct HealthAssistantTools: Sendable {
     }
 
     static let date: JSONValue = ["type": "string", "description": "YYYY-MM-DD, local date"]
+
+    static let regionEnum: JSONValue = .array(BodyRegion.allCases.map { .string($0.rawValue) })
 
     public static let definitions: [ToolDefinition] = [
         ToolDefinition(name: "get_today_summary",
@@ -107,6 +109,15 @@ public struct HealthAssistantTools: Sendable {
         ToolDefinition(name: "get_body_notes",
                        description: "The user's own body notes (event date, date entered, region, their words, resolved or not). Notes are the user's descriptions, not diagnoses; an unresolved note is not proof of a current condition.",
                        parameters: object(["start_date": date, "end_date": date])),
+        ToolDefinition(name: "propose_body_note",
+                       description: "Prepare a body note from something the person says happened to their body (an injury, pain, illness or other note). Nothing is saved: the app shows a card, and the note is saved only if the person taps Add note. title is short and in their own words, never a diagnosis. If the place or the side (left or right) is unclear, ask one short question instead of calling this.",
+                       parameters: object(["region": ["type": "string", "enum": regionEnum],
+                                           "title": ["type": "string", "description": "Short, in their words, e.g. Rolled right ankle"],
+                                           "details": ["type": "string", "description": "Anything else they said about it (optional)"],
+                                           "date": date,
+                                           "kind": ["type": "string", "enum": ["injury", "pain", "illness", "note"]],
+                                           "resolved": ["type": "boolean", "description": "true only if they say it has already cleared up"]],
+                                          required: ["region", "title"])),
         ToolDefinition(name: "get_insights",
                        description: "The insights currently generated for the user (id, headline, explanation).",
                        parameters: object([:])),
@@ -123,6 +134,8 @@ public struct HealthAssistantTools: Sendable {
                                            "period": ["type": "string", "enum": ["day", "week", "month", "6m", "year", "all"]],
                                            "date": date, "insight_id": ["type": "string"],
                                            "metric": ["type": "string", "enum": metricEnum]], required: ["type"])),
+        heartRateRangeDefinition,
+        calculateDefinition,
     ]
 
     // MARK: Execution
@@ -173,12 +186,17 @@ public struct HealthAssistantTools: Sendable {
             guard let ma = metric(args["metric_a"]), let mb = metric(args["metric_b"]) else { return invalid("metric_a and metric_b are required") }
             return correlation(ma, mb, lag: Int(args["lag_days"]?.doubleValue ?? 0), span: span(args["start_date"], args["end_date"]) ?? ctx.trailing(90))
         case "get_body_notes": return bodyNotes(span(args["start_date"], args["end_date"]))
+        case "propose_body_note": return proposeBodyNote(args)
         case "get_insights": return insights()
         case "explain_insight": return explain(args["insight_id"]?.stringValue ?? "")
         case "get_data_sources":
             guard let m = metric(args["metric"]) else { return invalid("metric is required") }
             return sources(m)
         case "show_widget": return showWidget(args, session: session)
+        case "get_heart_rate_range": return heartRateRange(span(args["start_date"], args["end_date"]))
+        case "calculate":
+            guard let expression = args["expression"]?.stringValue else { return invalid("expression is required") }
+            return calculate(expression)
         default: return invalid("Unknown tool \(name)")
         }
     }
@@ -415,6 +433,27 @@ public struct HealthAssistantTools: Sendable {
            suggestedBlock: notes.first.map(AssistantBlock.bodyNote))
     }
 
+    /// A note built from the person's words for them to confirm. History is never changed here.
+    func proposeBodyNote(_ args: JSONValue) -> ToolOutput {
+        guard let region = args["region"]?.stringValue.flatMap(BodyRegion.named) else {
+            return invalid("region must be one of the listed body regions")
+        }
+        let title = (args["title"]?.stringValue ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return invalid("title is required") }
+        let details = args["details"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let date = min(args["date"]?.stringValue.flatMap(LocalDate.init(string:)) ?? ctx.today, ctx.today)
+        let kind = args["kind"]?.stringValue.flatMap(HealthEvent.Kind.init(rawValue:)) ?? .note
+        var resolved = false
+        if case .bool(true)? = args["resolved"] { resolved = true }
+        let note = HealthEvent(date: date, kind: kind, title: String(title.prefix(80)),
+                               note: details.flatMap { $0.isEmpty ? nil : String($0.prefix(400)) },
+                               bodyRegion: region, createdAt: ctx.now, resolvedDate: resolved ? ctx.today : nil)
+        return ToolOutput(result: [
+            "proposed": true, "saved": false, "region": .string(region.displayName), "event_date": .string(date.description),
+            "next": "The person sees a card with Edit and Add note. Nothing is saved until they tap Add note; say so.",
+        ], blocks: [.bodyNoteProposal(note)])
+    }
+
     func weightBlock() -> AssistantBlock? {
         guard let w = snapshot.weight else { return nil }
         let cutoff = ctx.now.addingTimeInterval(-120 * 86_400)
@@ -646,7 +685,7 @@ public struct HealthAssistantTools: Sendable {
 /// Metric names the model uses.
 public enum ToolMetric: String, CaseIterable, Sendable {
     case steps, distance, active_energy, exercise_minutes, flights, walking_speed, step_length
-    case weight, body_fat, sleep, resting_heart_rate, hrv
+    case weight, body_fat, sleep, resting_heart_rate, heart_rate, hrv
 
     public var metric: HealthMetric {
         switch self {
@@ -661,6 +700,7 @@ public enum ToolMetric: String, CaseIterable, Sendable {
         case .body_fat: .bodyFat
         case .sleep: .sleepDuration
         case .resting_heart_rate: .restingHeartRate
+        case .heart_rate: .heartRate
         case .hrv: .hrv
         }
     }

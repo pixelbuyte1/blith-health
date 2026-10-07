@@ -40,6 +40,41 @@ shoot() { # udid label args...
   echo "  $label"
 }
 
+now() { python3 -c 'import time; print(f"{time.time():.2f}")'; }
+
+# A real screen recording of the app on the large simulator (light appearance, sample data):
+# one launch per scene. tour-marks.txt lists when each scene was launched, in seconds from the start.
+record_tour() { # udid demo-args...
+  local udid="$1"; shift
+  local marks="$OUT/tour-marks.txt" pid t0
+  : > "$marks"
+  xcrun simctl io "$udid" recordVideo --codec=h264 --force "$OUT/tour-raw.mp4" >/dev/null 2>&1 &
+  pid=$!
+  sleep 3
+  t0=$(now)
+  scene() { # label seconds args...
+    local label="$1" wait="$2"; shift 2
+    xcrun simctl terminate "$udid" "$BUNDLE" >/dev/null 2>&1 || true
+    echo "$(python3 -c "print(f'{$(now) - $t0:.2f}')") $label" >> "$marks"
+    xcrun simctl launch "$udid" "$BUNDLE" "$@" >/dev/null
+    sleep "$wait"
+  }
+  scene today 10 "$@" -BlithTab today
+  scene today-live 8 "$@" -BlithTab today -BlithScrollTo live -BlithLiveBPM 74
+  scene today-monitor 7 "$@" -BlithTab today -BlithScrollTo monitor
+  scene activity 8 "$@" -BlithTab walk -BlithPeriod month
+  scene sleep 7 "$@" -BlithTab sleep
+  scene sleep-stages 7 "$@" -BlithTab sleep -BlithScrollTo stages
+  scene body 10 "$@" -BlithTab body -BlithBodyYaw 28
+  scene body-focus 8 "$@" -BlithTab body -BlithBodyFocus sample-ankle
+  scene body-muscle 8 "$@" -BlithTab body -BlithBodyLayer muscle -BlithBodyYaw -20
+  scene ask 14 "$@" -BlithTab ask -BlithAskScript YES
+  scene ask-bodynote 10 "$@" -BlithTab ask -BlithAskNote YES
+  kill -INT "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  echo "  tour-raw.mp4 ($(cat "$marks" | wc -l | tr -d ' ') scenes)"
+}
+
 for DEV in "$SMALL" "$LARGE"; do
   UDID="${DEV%%|*}"
   NAME=$(echo "${DEV#*|}" | tr -cd '[:alnum:]')
@@ -66,6 +101,7 @@ for DEV in "$SMALL" "$LARGE"; do
   shoot "$UDID" "$NAME-10-body-muscle-back" "${DEMO[@]}" -BlithTab body -BlithBodyLayer muscle -BlithBodyYaw 180
   shoot "$UDID" "$NAME-11-readiness" "${DEMO[@]}" -BlithSheet readiness
   shoot "$UDID" "$NAME-12-ask" "${DEMO[@]}" -BlithTab ask -BlithAskScript YES
+  shoot "$UDID" "$NAME-12b-ask-bodynote" "${DEMO[@]}" -BlithTab ask -BlithAskNote YES
   if [ "$UDID" = "${SMALL%%|*}" ]; then
     shoot "$UDID" "$NAME-13-vital" "${DEMO[@]}" -BlithSheet vital
     shoot "$UDID" "$NAME-14-activity-day" "${DEMO[@]}" -BlithTab walk -BlithPeriod month -BlithWalkDaysAgo 40
@@ -80,6 +116,8 @@ for DEV in "$SMALL" "$LARGE"; do
   shoot "$UDID" "$NAME-L04-activity" "${DEMO[@]}" -BlithTab walk -BlithPeriod month
   shoot "$UDID" "$NAME-L05-sleep" "${DEMO[@]}" -BlithTab sleep
   shoot "$UDID" "$NAME-L12-ask" "${DEMO[@]}" -BlithTab ask -BlithAskScript YES
+  shoot "$UDID" "$NAME-L12b-ask-bodynote" "${DEMO[@]}" -BlithTab ask -BlithAskNote YES
+  if [ "$UDID" = "${LARGE%%|*}" ]; then record_tour "$UDID" "${DEMO[@]}"; fi
   xcrun simctl ui "$UDID" appearance dark
   # Keep any crash reports and SceneKit/Metal errors from this device for debugging.
   xcrun simctl spawn "$UDID" log show --last 20m --style compact --predicate 'process == "Blith" AND (messageType == error OR messageType == fault)' \

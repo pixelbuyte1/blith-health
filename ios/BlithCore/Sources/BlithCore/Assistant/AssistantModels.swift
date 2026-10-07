@@ -149,6 +149,8 @@ public enum AssistantBlock: Codable, Hashable, Sendable, Identifiable {
     case daySteps(DayStepsBlock)
     case bodyNote(HealthEvent)
     case scores(ScoresBlock)
+    /// A body note Ask prepared from what the person said. Not saved until they tap Add note.
+    case bodyNoteProposal(HealthEvent)
 
     public var kind: String {
         switch self {
@@ -164,6 +166,7 @@ public enum AssistantBlock: Codable, Hashable, Sendable, Identifiable {
         case .daySteps: "daySteps"
         case .bodyNote: "bodyNote"
         case .scores: "scores"
+        case .bodyNoteProposal: "bodyNoteProposal"
         }
     }
 
@@ -178,6 +181,7 @@ public enum AssistantBlock: Codable, Hashable, Sendable, Identifiable {
         case .daySteps(let b): "day-\(b.date)"
         case .bodyNote(let n): "note-\(n.id)"
         case .scores(let b): "scores-\(b.date)"
+        case .bodyNoteProposal(let n): "proposal-\(n.id)"
         default: kind
         }
     }
@@ -207,6 +211,7 @@ public enum AssistantBlock: Codable, Hashable, Sendable, Identifiable {
         case .daySteps(let b): .walkDay(b.date)
         case .bodyNote(let n): .body(n.id)
         case .scores(let b): .readiness(b.date)
+        case .bodyNoteProposal: nil
         }
     }
 }

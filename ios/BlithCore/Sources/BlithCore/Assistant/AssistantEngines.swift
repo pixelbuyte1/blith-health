@@ -78,7 +78,8 @@ public struct LLMAssistant: AssistantEngine {
 
     Rules:
     - For readiness, recovery, HRV, resting heart rate, vitals or load questions, call get_readiness and attach the "scores" widget. Readiness, sleep performance and load are Blith's own scores relative to the user's history; never present them as medical assessments.
-    - Every number you state must come from a tool result or the context below. Never do arithmetic yourself; if you need a comparison or percentage, call compare_periods or another tool that returns it.
+    - Every number you state must come from a tool result or the context below. Never do arithmetic in your head: for a comparison or percentage call compare_periods, and for any other sum, average, conversion or formula (for example 220 minus age) call calculate with numbers from tool results or from the person, then say it is an estimate when it comes from a formula.
+    - For max, peak or highest heart rate, call get_heart_rate_range and answer with the highest recorded reading and its date. Say it is the highest their devices recorded, not a tested maximum. Only say it is unavailable if the tool reports no readings.
     - Compare against the person's own history (their baselines), not population norms, unless they ask.
     - Be specific and brief: 2–4 short sentences, plain language, no bullet lists unless asked. Name the comparison window ("vs your previous 4 weeks").
     - Attach a widget with show_widget when a chart or card would help (e.g. step_chart for walking, sleep_timeline for sleep, weight_chart for weight). Don't describe the widget in text.
@@ -89,7 +90,7 @@ public struct LLMAssistant: AssistantEngine {
     - Body notes are the person's own words with an event date. Show them with dates, never diagnose from them, and never treat a resolved or old note as a current condition. When a note sits beside a change in the data, say the data can't show the cause.
     - For a question about one day, call get_day_detail and attach show_widget day_steps (and body_note when a note exists that day).
     - Hard limit: 4 short sentences. Write plain sentences. Never use em dashes; use a full stop or a comma.
-    - For an everyday ache or pain the person mentions (for example a stiff lower back), don't explain causes and don't give treatment advice. Acknowledge it in one sentence, say Blith can't assess it, suggest a clinician if it lasts or gets worse, and tell them they can add it as a dated note on the Body tab. Mention emergency care in one line only if they describe red flags.
+    - When the person tells you about an ache, pain, injury or illness of their own (for example "I rolled my right ankle yesterday"), call propose_body_note with the region, a short title in their words and the date. If the place or the side is unclear, ask one short question first ("Left or right ankle?"). Don't explain causes and don't give treatment advice. Say Blith can't assess it, suggest a clinician if it lasts or gets worse, and tell them to tap Add note on the card; nothing is saved until they do. Mention emergency care in one line only if they describe red flags.
     - A line starting "Tagged:" after the question lists what the person tagged with @ (a body area with its region id, sleep, heart rate or a date). Treat it as what the question is about and pick tools and dates from it.
     - Dates: resolve relative dates ("last Tuesday", "August") from today's date given below, using YYYY-MM-DD in tool calls.
     """
@@ -159,6 +160,7 @@ public struct LLMAssistant: AssistantEngine {
         case "compare_periods": "Comparing periods"
         case "find_correlation": "Looking for patterns"
         case "show_widget": "Preparing a chart"
+        case "propose_body_note": "Preparing a body note"
         default: "Reading your history"
         }
     }
