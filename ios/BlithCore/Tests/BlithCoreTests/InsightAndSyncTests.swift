@@ -366,3 +366,44 @@ struct EngagementTests {
         #expect(decoded?.bodyRegion == .other && decoded?.kind == .note)
     }
 }
+
+@Suite("Assistant maths and heart rate")
+struct AssistantMathTests {
+    func tools(heartRate: [Int: (avg: Double, min: Double, max: Double)] = [:]) -> HealthAssistantTools {
+        var h = T.history(steps: T.constant(6000, days: 0...10))
+        var series: [LocalDate: DailyAggregate] = [:]
+        for (ago, v) in heartRate {
+            let date = T.today.adding(days: -ago)
+            series[date] = DailyAggregate(date: date, metric: .heartRate, value: v.avg, min: v.min, max: v.max)
+        }
+        h.daily[.heartRate] = series
+        return HealthAssistantTools(snapshot: HealthSnapshot.build(history: h, profile: UserProfile(), now: T.now, calendar: T.calendar))
+    }
+
+    @Test func calculateEvaluatesWithPrecedenceAndFunctions() {
+        let t = tools()
+        func result(_ e: String) -> Double? { t.execute(name: "calculate", arguments: ["expression": .string(e)]).result["result"]?.doubleValue }
+        #expect(result("(62 + 58 + 61) / 3") == 60.3333)
+        #expect(result("220 - 34") == 186)
+        #expect(result("2 + 3 * 4") == 14)
+        #expect(result("-2 ^ 2") == -4)
+        #expect(result("round(7.456, 1)") == 7.5)
+        #expect(result("max(55, 65, 60) - min(55, 65, 60)") == 10)
+        #expect(t.execute(name: "calculate", arguments: ["expression": "1 / 0"]).result["error"] != nil)
+        #expect(t.execute(name: "calculate", arguments: ["expression": "foo(1)"]).result["error"] != nil)
+        #expect(t.execute(name: "calculate", arguments: ["expression": ""]).result["error"] != nil)
+    }
+
+    @Test func heartRateRangeReturnsHighestReadingAndItsDay() {
+        let t = tools(heartRate: [1: (70, 52, 131), 3: (75, 50, 168), 6: (72, 54, 149)])
+        let out = t.execute(name: "get_heart_rate_range", arguments: [:])
+        #expect(out.result["highest_reading"]?.stringValue == "168 bpm")
+        #expect(out.result["highest_reading_date"]?.stringValue?.hasPrefix(T.today.adding(days: -3).description) == true)
+        #expect(out.result["lowest_reading"]?.stringValue == "50 bpm")
+        #expect(out.result["days_with_data"]?.doubleValue == 3)
+    }
+
+    @Test func heartRateRangeWithoutReadingsReportsMissingData() {
+        #expect(tools().execute(name: "get_heart_rate_range", arguments: [:]).result["error"] != nil)
+    }
+}

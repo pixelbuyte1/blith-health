@@ -32,7 +32,7 @@ public struct ToolOutput: Sendable {
 }
 
 /// The deterministic query layer the assistant calls. Every number an answer contains comes
-/// from here — the model explains, it never computes.
+/// from here or from `calculate` — the model explains, it never does sums itself.
 public struct HealthAssistantTools: Sendable {
     public let snapshot: HealthSnapshot
 
@@ -123,6 +123,8 @@ public struct HealthAssistantTools: Sendable {
                                            "period": ["type": "string", "enum": ["day", "week", "month", "6m", "year", "all"]],
                                            "date": date, "insight_id": ["type": "string"],
                                            "metric": ["type": "string", "enum": metricEnum]], required: ["type"])),
+        heartRateRangeDefinition,
+        calculateDefinition,
     ]
 
     // MARK: Execution
@@ -179,6 +181,10 @@ public struct HealthAssistantTools: Sendable {
             guard let m = metric(args["metric"]) else { return invalid("metric is required") }
             return sources(m)
         case "show_widget": return showWidget(args, session: session)
+        case "get_heart_rate_range": return heartRateRange(span(args["start_date"], args["end_date"]))
+        case "calculate":
+            guard let expression = args["expression"]?.stringValue else { return invalid("expression is required") }
+            return calculate(expression)
         default: return invalid("Unknown tool \(name)")
         }
     }
@@ -646,7 +652,7 @@ public struct HealthAssistantTools: Sendable {
 /// Metric names the model uses.
 public enum ToolMetric: String, CaseIterable, Sendable {
     case steps, distance, active_energy, exercise_minutes, flights, walking_speed, step_length
-    case weight, body_fat, sleep, resting_heart_rate, hrv
+    case weight, body_fat, sleep, resting_heart_rate, heart_rate, hrv
 
     public var metric: HealthMetric {
         switch self {
@@ -661,6 +667,7 @@ public enum ToolMetric: String, CaseIterable, Sendable {
         case .body_fat: .bodyFat
         case .sleep: .sleepDuration
         case .resting_heart_rate: .restingHeartRate
+        case .heart_rate: .heartRate
         case .hrv: .hrv
         }
     }
