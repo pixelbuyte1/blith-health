@@ -478,8 +478,10 @@ HEAD_BONES = ('ethmoid', 'frontal bone', 'occipital', 'parietal', 'temporal bone
               'canine', 'premolar')
 NECK_BONES = ('atlas', 'axis', 'cervical vertebra', 'hyoid')
 ARM_BONES = ('humerus', 'radius', 'ulna', 'capitate', 'hamate', 'lunate', 'pisiform', 'scaphoid', 'trapezium',
-             'trapezoid', 'triquetral', 'metacarpal', 'finger', 'thumb', 'of hand')
-LEG_BONES = ('femur', 'patella', 'tibia', 'fibula', 'calcaneus', 'talus', 'cuboid', 'cuneiform', 'of foot', 'metatarsal',
+             'trapezoid', 'triquetral', 'metacarpal', 'finger', 'thumb', 'hand')
+# 'foot' and 'hand', not 'of foot': BodyParts3D names some bones "Navicular bone of left foot", and
+# those fell through to the trunk, which labelled the sole of the foot as Hips.
+LEG_BONES = ('femur', 'patella', 'tibia', 'fibula', 'calcaneus', 'talus', 'cuboid', 'cuneiform', 'foot', 'metatarsal',
              'toe', 'hallux')
 PARTS = ['head', 'neck', 'trunk', 'armL', 'armR', 'legL', 'legR']
 
@@ -838,22 +840,30 @@ def rectus_to_midline(V, gap=0.0012):
 UNCOVER = (('External abdominal oblique', 'Rectus abdominis'),)
 
 
-def uncover(mparts, pairs=UNCOVER, depth=0.008, reach=0.004):
+def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03):
+    """Runs on the full-detail parts, before the visibility passes, so the uncovered muscle gets the
+    triangle budget of a visible one. A sheet triangle is dropped when it faces forward and the
+    muscle underneath lies straight behind it (seen from the front) within `depth`."""
+    named = [(pretty(q['name'])[0], pretty(q['name'])[1]) for q in parts]
     for cover, under in pairs:
-        for q in mparts:
-            if q['name'] != cover:
+        for q, (name, side) in zip(parts, named):
+            if name != cover:
                 continue
-            beneath = [p for p in mparts if p['name'] == under and p['side'] == q['side']]
-            if not beneath:
+            U = [p['V'] for p, (n2, s2) in zip(parts, named) if n2 == under and s2 == side]
+            if not U:
                 continue
-            tree = cKDTree(np.concatenate([p['V'] for p in beneath] + [p['V'][p['F']].mean(1) for p in beneath]))
+            U = np.concatenate(U)
+            tree = cKDTree(U[:, :2])
             P = q['V'][q['F']]
             c, n = P.mean(1), unit(np.cross(P[:, 1] - P[:, 0], P[:, 2] - P[:, 0]))
             over = np.zeros(len(c), bool)
-            for t in np.linspace(0.0, depth, 9):
-                over |= tree.query(c - n * t)[0] < reach
+            front = np.nonzero(n[:, 2] > 0.2)[0]
+            for k, ids in zip(front, tree.query_ball_point(c[front, :2], reach)):
+                if ids:
+                    dz = c[k, 2] - U[ids, 2]
+                    over[k] = bool(((dz > -0.002) & (dz < depth)).any())
             q['V'], q['F'] = compact(q['V'], q['F'][~over])
-            print(f"  {cover} ({q['side']}): {int(over.sum())} of {len(over)} triangles over {under} dropped")
+            print(f"  {cover} ({side}): {int(over.sum())} of {len(over)} triangles in front of {under} dropped")
 
 
 def split_at_navel(mparts, y_navel, name='Rectus abdominis'):
@@ -1121,6 +1131,8 @@ def main():
             q['V'] = rectus_to_midline(q['V'])
         if face_weight(q['V']).mean() > 0.5:               # soften the scan-like facial rings
             q['V'] = taubin(q['V'], q['F'], iters=12)
+    uncover(parts)
+    for q in parts:
         q['pre'] = decimate(q['V'], q['F'], max(250, len(q['F']) * 0.4))
     pre = [dict(V=q['pre'][0], F=q['pre'][1]) for q in parts]
     V, F, pid = merge(pre)
@@ -1147,7 +1159,6 @@ def main():
         name, side, kind = pretty(parts[i]['name'])
         mparts.append(dict(V=V_, F=F_, name=name, side=side, kind=kind, src=parts[i]['name']))
 
-    uncover(mparts)
     mparts = split_at_navel(mparts, L.y_navel)
 
     # regions for muscle triangles: region of the nearest skin point
