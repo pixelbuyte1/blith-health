@@ -95,7 +95,7 @@ struct AskTagPanel: View {
     let pick: (AskTag) -> Void
     @State private var section: Part?
     @State private var region: BodyRegion?
-    @State private var day = Date()
+    @State private var day = AppClock.now()
 
     enum Part { case body, day }
 
@@ -113,7 +113,7 @@ struct AskTagPanel: View {
                 if section == .body { bodyPicker }
                 row("Sleep", detail: "A night", icon: .sleep, expanded: false) { pick(.sleep) }
                 row("Heart rate", detail: "Readings", icon: .heartRate, expanded: false) { pick(.heartRate) }
-                row("A day", detail: "Everything that day", icon: .day(LocalDate(Date(), calendar: .current)), expanded: section == .day) {
+                row("A day", detail: "Everything that day", icon: .day(LocalDate(AppClock.now(), calendar: .current)), expanded: section == .day) {
                     section = section == .day ? nil : .day
                 }
                 if section == .day { dayPicker }
@@ -188,7 +188,7 @@ struct AskTagPanel: View {
 
     private var dayPicker: some View {
         HStack {
-            DatePicker("Day", selection: $day, in: ...Date(), displayedComponents: .date)
+            DatePicker("Day", selection: $day, in: ...AppClock.now(), displayedComponents: .date)
                 .labelsHidden()
             Spacer()
             Button("Tag") {

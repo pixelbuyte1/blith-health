@@ -96,6 +96,18 @@ struct SyncTests {
         #expect(h2.workouts.count == h.workouts.count)
     }
 
+    @Test func incrementalSyncBackfillsOnlyAMetricAddedLater() async throws {
+        let provider = MockHealthProvider(scenario: .balanced, now: { T.now })
+        let engine = SyncEngine(provider: provider, calendar: T.calendar, now: { T.now })
+        var h = try await engine.initialImport(into: HealthHistory(origin: .demo(.balanced)))
+        let workouts = h.workouts.count
+        h.daily[.heartRate] = nil
+        let h2 = try await engine.incrementalSync(h)
+        // Older than the recent window, so only the backfill can have filled it.
+        #expect(!h2.values(.heartRate, in: DateSpan(T.today.adding(days: -300), T.today.adding(days: -200))).isEmpty)
+        #expect(h2.workouts.count == workouts)
+    }
+
     @Test func missingScenariosDegradeGracefully() async throws {
         for scenario in [DemoScenario.missingSleep, .missingWeight, .noWalkingSpeed, .newUser, .partialPermissions] {
             let provider = MockHealthProvider(scenario: scenario, now: { T.now })

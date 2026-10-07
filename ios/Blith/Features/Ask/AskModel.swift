@@ -16,6 +16,12 @@ final class AskModel {
     /// What the person tagged with @ for the next question.
     var tags: [AskTag] = []
 
+    /// From the @ panel: adds a tag, never removes one that's already there.
+    func addTag(_ tag: AskTag) {
+        guard !tags.contains(tag), tags.count < AskTag.limit else { return }
+        tags.append(tag)
+    }
+
     func toggleTag(_ tag: AskTag) {
         if let i = tags.firstIndex(of: tag) {
             tags.remove(at: i)
@@ -27,7 +33,7 @@ final class AskModel {
     /// Automatic: Quick for the first answers of a chat, then Deep for the follow-ups.
     var currentModel: AskModelChoice {
         if let pickedModel { return pickedModel }
-        let aiAnswers = messages.filter { $0.role == .assistant && !$0.isLocal }.count
+        let aiAnswers = messages.filter { $0.role == .assistant && !$0.isLocal && !$0.isError }.count
         return aiAnswers < AskModelChoice.quickAnswers ? .quick : .deep
     }
 
@@ -73,10 +79,10 @@ final class AskModel {
                 reply.modelName = choice.name
                 messages.append(reply)
             } else {
-                messages.append(try await LocalAssistant(tools: tools).respond(to: prompt, history: history, progress: onProgress))
+                messages.append(try await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
             }
         } catch {
-            var local = (try? await LocalAssistant(tools: tools).respond(to: prompt, history: history, progress: onProgress))
+            var local = (try? await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
                 ?? ChatMessage(role: .assistant, text: "Something went wrong answering that.", isError: true)
             local.text = "I couldn't reach the AI service, so here's what I can tell from your data on this iPhone:\n\n" + local.text
             messages.append(local)
