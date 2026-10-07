@@ -64,6 +64,33 @@ for it in range(6):
     need = np.maximum(avg, need * 0.85).astype(np.float32) if it < 3 else avg.astype(np.float32)
 need = np.clip(need, BASE, 0.03)
 
+# Never inflate two facing parts of the skin into each other (arm against ribs, fingers against thigh):
+# where another sheet of skin lies within 7 cm along a vertex's normal, each side may grow only to half
+# the gap, less 1.5 mm of clearance, so the arms stay free of the torso instead of looking glued on.
+gap = np.full(len(sp), np.inf)
+for i, near in enumerate(tree.query_ball_point(sp, 0.07)):
+    near = np.asarray(near)
+    d = sp[near] - sp[i]
+    dist = np.linalg.norm(d, axis=1)
+    ok = (dist > 1e-4) & ((d @ sn[i]) > 0.6 * dist) & ((sn[near] @ sn[i]) < -0.2)
+    if ok.any(): gap[i] = dist[ok].min()
+# Only the arms and torso: hands against thighs and the inner thighs keep the full clearance their muscles need.
+TORSO_ARMS = {"chest", "abdomen", "upperBack", "lowerBack", "rightShoulder", "leftShoulder", "rightUpperArm",
+              "leftUpperArm", "rightElbow", "leftElbow", "rightForearm", "leftForearm"}
+limited = np.zeros(len(sp), bool)
+for r, m, f, c in sg:
+    if meta["regions"][r]["id"] in TORSO_ARMS: limited[np.unique(si[f:f + c])] = True
+cap = np.where(np.isfinite(gap) & limited, np.maximum(gap / 2 - 0.0015, BASE), 0.03).astype(np.float32)
+hard = cap.copy()
+for it in range(3):  # let the limit fade into neighbouring vertices so no ridge forms
+    s = np.zeros(len(sp)); w = np.zeros(len(sp))
+    tot = cap[tris].sum(axis=1)
+    for k in range(3):
+        np.add.at(s, tris[:, k], tot); np.add.at(w, tris[:, k], 3)
+    cap = np.minimum(np.where(w > 0, s / np.maximum(w, 1), cap), cap).astype(np.float32)
+cap = np.minimum(cap, hard)
+need = np.minimum(need, cap).astype(np.float32)
+
 
 out = RES / "skin_offsets.bin"
 out.write_bytes(b"BLO1" + struct.pack("<I", len(need)) + need.astype("<f4").tobytes())
