@@ -110,6 +110,8 @@ workflows:
           bash "$CM_BUILD_DIR/scripts/screenshots.sh"
     artifacts:
       - build/screenshots/*.png
+      - build/screenshots/*.mp4
+      - build/screenshots/tour-marks.txt
       - build/xcodebuild.log
       - core-tests.log
 

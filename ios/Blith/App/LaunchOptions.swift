@@ -54,6 +54,9 @@ enum LaunchOptions {
                                      "Show my sleep last night."],
                                     snapshot: snapshot)
         }
+        if args.bool(forKey: "BlithAskNote"), let snapshot = app.snapshot {
+            await app.ask.runScript(["I rolled my right ankle yesterday"], snapshot: snapshot)
+        }
         switch args.string(forKey: "BlithSheet") {
         case "sleep": app.router.sheet = .sleep(nil)
         case "weight": app.router.sheet = .weight

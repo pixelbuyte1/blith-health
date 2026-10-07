@@ -14,6 +14,7 @@ public struct LocalAssistant: AssistantEngine {
         let t = q.lowercased()
         func has(_ words: String...) -> Bool { words.contains { t.contains($0) } }
         if has("note", "ankle", "knee", "injur", "hurt", "pain", "sprain", "body") && !has("walk", "step") { return .notes }
+        if isReport(q), BodyRegion.match(in: q) != nil { return .notes }
         if has("readiness", "recovery", "recovered", "ready", "score", "hrv", "heart rate", "resting", "load", "strain", "vitals") { return .readiness }
         if let d = RelativeDates.day(in: t, today: today), d != today, !has("sleep", "slept", "weigh") { return .day(d) }
         if has("sleep", "slept", "bed", "night") { return .sleep }
@@ -28,6 +29,29 @@ public struct LocalAssistant: AssistantEngine {
         if has("month", "30 days", "lately", "recently") { return .walking(.month) }
         if has("walk", "step", "moving", "active", "move", "week") { return .walking(.week) }
         return .unknown
+    }
+
+    /// The person is telling Ask about something that happened, not asking to see their notes.
+    static func isReport(_ q: String) -> Bool {
+        let t = q.lowercased()
+        func has(_ words: String...) -> Bool { words.contains { t.contains($0) } }
+        guard !has("show", "list", "how many", "when did", "what ", "which notes", "my notes") else { return false }
+        return has("hurt", "sprain", "rolled", "twist", "sore", "pain", "ache", "aching", "injur", "pulled", "strain", "stiff",
+                   "bruise", "swollen", "fell", "broke", "tweak")
+    }
+
+    static func noteKind(_ q: String) -> HealthEvent.Kind {
+        let t = q.lowercased()
+        if ["injur", "sprain", "rolled", "twist", "pulled", "strain", "bruise", "fell", "broke", "tweak"].contains(where: { t.contains($0) }) { return .injury }
+        if ["hurt", "sore", "pain", "ache", "aching", "stiff", "swollen"].contains(where: { t.contains($0) }) { return .pain }
+        return .note
+    }
+
+    /// Their own words, first sentence only, capitalised.
+    static func noteTitle(_ q: String) -> String {
+        let first = q.split(whereSeparator: { ".!?\n".contains($0) }).first.map(String.init) ?? q
+        let trimmed = first.trimmingCharacters(in: .whitespacesAndNewlines)
+        return String((trimmed.prefix(1).uppercased() + trimmed.dropFirst()).prefix(80))
     }
 
     public func respond(to question: String, history: [ChatMessage], progress: @escaping @Sendable (String) -> Void) async throws -> ChatMessage {
@@ -72,6 +96,19 @@ public struct LocalAssistant: AssistantEngine {
             let blocks = [output.suggestedBlock].compactMap { $0 } + output.extraBlocks
             return ChatMessage(role: .assistant, text: text, blocks: blocks, evidence: output.evidence, toolsUsed: [], isLocal: true)
         case .notes:
+            if Self.isReport(question), let match = BodyRegion.match(in: question) {
+                switch match {
+                case .region(let region):
+                    let date = RelativeDates.day(in: question, today: ctx.today) ?? ctx.today
+                    let proposal = tools.execute(name: "propose_body_note", arguments: [
+                        "region": .string(region.rawValue), "title": .string(Self.noteTitle(question)),
+                        "date": .string(date.description), "kind": .string(Self.noteKind(question).rawValue)])
+                    text = "I can add this as a note on your \(region.displayName.lowercased()). Check the card and tap Add note to save it. Blith can't assess it, so see a clinician if it gets worse or doesn't ease."
+                    return ChatMessage(role: .assistant, text: text, blocks: proposal.blocks, isLocal: true)
+                case .needsSide(let part):
+                    return ChatMessage(role: .assistant, text: "Which \(part), left or right? Say for example “my left \(part) hurts” and I'll set up the note.", isLocal: true)
+                }
+            }
             output = tools.execute(name: "get_body_notes", arguments: [:])
             let notes = ctx.history.bodyNotes
             if let latest = notes.first {
