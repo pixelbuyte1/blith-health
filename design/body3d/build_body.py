@@ -835,15 +835,15 @@ def rectus_to_midline(V, gap=0.0012):
 
 
 # Sheets that lie over another muscle. The part of the sheet directly above it is dropped, so the
-# muscle underneath can be seen and tapped: the external oblique's aponeurosis covers the rectus
-# abdominis in the source model, which made the whole half of the abdomen one tap target.
-UNCOVER = (('External abdominal oblique', 'Rectus abdominis'),)
+# muscle underneath can be seen and tapped: both obliques' aponeuroses cover the rectus abdominis
+# in the source model, which made the whole half of the abdomen one tap target.
+UNCOVER = (('External abdominal oblique', 'Rectus abdominis'), ('Internal abdominal oblique', 'Rectus abdominis'))
 
 
 def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03):
     """Runs on the full-detail parts, before the visibility passes, so the uncovered muscle gets the
-    triangle budget of a visible one. A sheet triangle is dropped when it faces forward and the
-    muscle underneath lies straight behind it (seen from the front) within `depth`."""
+    triangle budget of a visible one. A sheet triangle (either face of the sheet) is dropped when
+    the muscle underneath lies straight behind it, seen from the front, within `depth`."""
     named = [(pretty(q['name'])[0], pretty(q['name'])[1]) for q in parts]
     for cover, under in pairs:
         for q, (name, side) in zip(parts, named):
@@ -855,10 +855,9 @@ def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03):
             U = np.concatenate(U)
             tree = cKDTree(U[:, :2])
             P = q['V'][q['F']]
-            c, n = P.mean(1), unit(np.cross(P[:, 1] - P[:, 0], P[:, 2] - P[:, 0]))
+            c = P.mean(1)
             over = np.zeros(len(c), bool)
-            front = np.nonzero(n[:, 2] > 0.2)[0]
-            for k, ids in zip(front, tree.query_ball_point(c[front, :2], reach)):
+            for k, ids in enumerate(tree.query_ball_point(c[:, :2], reach)):
                 if ids:
                     dz = c[k, 2] - U[ids, 2]
                     over[k] = bool(((dz > -0.002) & (dz < depth)).any())
