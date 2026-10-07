@@ -840,6 +840,9 @@ def rectus_to_midline(V, gap=0.0012):
 UNCOVER = (('External abdominal oblique', 'Rectus abdominis'), ('Internal abdominal oblique', 'Rectus abdominis'))
 
 
+ABDOMEN_MUSCLES = ('Rectus abdominis', 'External abdominal oblique', 'Internal abdominal oblique')
+
+
 def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03):
     """Runs on the full-detail parts, before the visibility passes, so the uncovered muscle gets the
     triangle budget of a visible one. A sheet triangle (either face of the sheet) is dropped when
@@ -1164,6 +1167,8 @@ def main():
     for q in mparts:
         _, j = stree.query(q['V'][q['F']].mean(1))
         q['treg'] = s_lab[j]
+        if q['name'].startswith(ABDOMEN_MUSCLES):           # the lower belly is abdomen, not hips
+            q['treg'] = np.where(q['treg'] == RI['hips'], RI['abdomen'], q['treg'])
         area = tri_area(q['V'], q['F'])
         q['region'] = int(np.bincount(q['treg'], weights=area, minlength=len(REGION_IDS)).argmax())
     _, j = stree.query(uV[uF].mean(1))
