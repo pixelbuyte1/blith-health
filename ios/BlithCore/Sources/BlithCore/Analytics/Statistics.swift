@@ -168,7 +168,7 @@ public enum Fmt {
         case .walkingStepLength: units == .metric ? "\(int(v * 100)) cm" : "\(int(v * 39.3701)) in"
         case .walkingAsymmetry, .walkingDoubleSupport, .bodyFat: "\(decimal(v * 100))%"
         case .weight: weight(v, units: units)
-        case .restingHeartRate, .walkingHeartRate: "\(int(v)) bpm"
+        case .restingHeartRate, .walkingHeartRate, .heartRate: "\(int(v)) bpm"
         case .hrv: "\(int(v)) ms"
         case .respiratoryRate: "\(decimal(v)) /min"
         case .oxygenSaturation: "\(decimal(v * 100))%"

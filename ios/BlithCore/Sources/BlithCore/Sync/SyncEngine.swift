@@ -96,6 +96,8 @@ public struct SyncEngine: Sendable {
         let today = LocalDate(now(), calendar: calendar)
         let lastDay = h.sync.lastSync.map { LocalDate($0, calendar: calendar) } ?? today.adding(days: -Self.recentWindowDays)
         var start = min(today.adding(days: -2), lastDay.adding(days: -2))
+        // Heart rate was added after some people's first import: read its past year once.
+        if h.daily[.heartRate] == nil { start = min(start, today.adding(days: -365)) }
         start = max(start, today.adding(days: -365 * maxYears))
         // Long gaps are fetched in the same chunk sizes as the initial import.
         var spans: [DateSpan] = []

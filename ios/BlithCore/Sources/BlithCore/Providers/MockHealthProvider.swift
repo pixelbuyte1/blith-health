@@ -159,6 +159,7 @@ public struct MockHealthProvider: HealthDataProvider {
         put(.restingHeartRate, rhr)
         put(.hrv, hrv)
         put(.walkingHeartRate, walkingHR)
+        put(.heartRate, walkingHR.map { DailyAggregate(date: $0.date, metric: .heartRate, value: $0.value - 28, min: $0.value - 45, max: $0.value + 62, sampleCount: 40) })
         put(.respiratoryRate, resp)
         put(.oxygenSaturation, spo2)
         put(.wristTemperature, temp)
