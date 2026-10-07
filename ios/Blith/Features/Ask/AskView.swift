@@ -121,24 +121,45 @@ struct AskView: View {
 
     var composer: some View {
         @Bindable var ask = app.ask
-        return HStack(alignment: .bottom, spacing: Space.s) {
-            TextField("Ask about your health…", text: $ask.draft, axis: .vertical)
-                .lineLimit(1...5)
-                .focused($focused)
-                .submitLabel(.send)
-                .onSubmit { submit() }
-                .padding(.horizontal, Space.l)
-                .padding(.vertical, Space.m)
-                .glassSurface(RoundedRectangle(cornerRadius: 22, style: .continuous), interactive: true)
-            Button(action: submit) {
-                Image(systemName: "arrow.up")
-                    .font(.headline.weight(.bold))
-                    .frame(width: 28, height: 28)
+        let model = ask.currentModel
+        let usesAI = AppConfig.aiConfigured && Persistence.aiConsent != false
+        return VStack(spacing: Space.s) {
+            VStack(alignment: .leading, spacing: Space.m) {
+                TextField("Ask about your health…", text: $ask.draft, axis: .vertical)
+                    .lineLimit(1...5)
+                    .focused($focused)
+                    .submitLabel(.send)
+                    .onSubmit { submit() }
+                    .padding(.horizontal, Space.xs)
+                HStack(spacing: Space.s) {
+                    if usesAI {
+                        AskModelToggle(selection: model) { app.ask.pickedModel = $0 }
+                    }
+                    Spacer(minLength: 0)
+                    Button(action: submit) {
+                        Image(systemName: "arrow.up")
+                            .font(.headline.weight(.bold))
+                            .frame(width: 28, height: 28)
+                    }
+                    .glassButton(prominent: true)
+                    .buttonBorderShape(.circle)
+                    .disabled(ask.draft.trimmingCharacters(in: .whitespaces).isEmpty || ask.isResponding)
+                    .accessibilityLabel("Send")
+                }
             }
-            .glassButton(prominent: true)
-            .buttonBorderShape(.circle)
-            .disabled(ask.draft.trimmingCharacters(in: .whitespaces).isEmpty || ask.isResponding)
-            .accessibilityLabel("Send")
+            .padding(.horizontal, Space.m)
+            .padding(.top, Space.m)
+            .padding(.bottom, Space.s)
+            .glassSurface(RoundedRectangle(cornerRadius: 26, style: .continuous), interactive: true)
+            // Glass doesn't hit-test on iOS 26: make the whole field focus the text box.
+            .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .onTapGesture { focused = true }
+            if usesAI {
+                Text("\(Text(model.name).foregroundStyle(Palette.signal)) · \(model.blurb)")
+                    .font(Typo.caption)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.s)
@@ -180,6 +201,12 @@ struct MessageView: View {
                 }
                 ForEach(message.blocks) { block in
                     ChatBlockView(block: block, open: open)
+                }
+                if let model = message.modelName, !message.isLocal {
+                    Text("Answered by \(model)")
+                        .font(Typo.mono(11, .medium))
+                        .foregroundStyle(Palette.tertiaryInk)
+                        .padding(.leading, 30 + Space.s)
                 }
                 if !message.evidence.isEmpty {
                     WhyButton { showEvidence = true }

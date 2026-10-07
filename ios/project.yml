@@ -94,6 +94,7 @@ targets:
         # AI configuration, supplied by Config/Secrets.xcconfig (gitignored) or CI.
         OPENROUTER_API_KEY: $(OPENROUTER_API_KEY)
         OPENROUTER_MODEL: $(OPENROUTER_MODEL)
+        OPENROUTER_MODEL_QUICK: $(OPENROUTER_MODEL_QUICK)
         PRIVACY_POLICY_URL: $(PRIVACY_POLICY_URL)
     settings:
       base:

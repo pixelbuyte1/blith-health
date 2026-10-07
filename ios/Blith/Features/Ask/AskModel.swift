@@ -11,11 +11,21 @@ final class AskModel {
     var progress: String?
     /// Set when the user sends before deciding on AI sharing; the view shows the consent sheet.
     var pendingQuestion: String?
+    /// The model the person picked with the composer toggle for this chat; nil means automatic.
+    var pickedModel: AskModelChoice?
+
+    /// Automatic: Quick for the first answers of a chat, then Deep for the follow-ups.
+    var currentModel: AskModelChoice {
+        if let pickedModel { return pickedModel }
+        let aiAnswers = messages.filter { $0.role == .assistant && !$0.isLocal }.count
+        return aiAnswers < AskModelChoice.quickAnswers ? .quick : .deep
+    }
 
     func clear() {
         messages = []
         draft = ""
         pendingQuestion = nil
+        pickedModel = nil
     }
 
     /// Chooses the engine: the AI model when the user allowed sharing and a key exists,
@@ -42,8 +52,11 @@ final class AskModel {
         let onProgress: @Sendable (String) -> Void = { p in Task { @MainActor in self.progress = p } }
         do {
             if useAI, let key = AppConfig.openRouterKey {
-                let engine = LLMAssistant(client: OpenRouterClient(apiKey: key, model: AppConfig.model), tools: tools)
-                messages.append(try await engine.respond(to: question, history: history, progress: onProgress))
+                let choice = currentModel
+                let engine = LLMAssistant(client: OpenRouterClient(apiKey: key, model: choice.modelID), tools: tools)
+                var reply = try await engine.respond(to: question, history: history, progress: onProgress)
+                reply.modelName = choice.name
+                messages.append(reply)
             } else {
                 messages.append(try await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
             }
