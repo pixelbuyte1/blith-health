@@ -52,15 +52,8 @@ struct AskView: View {
             }
             .blithBackground(wash: Palette.cyan.opacity(0.12))
             .safeAreaInset(edge: .bottom) { composer }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if !ask.messages.isEmpty {
-                        Button { ask.clear() } label: { Image(systemName: "square.and.pencil") }
-                            .accessibilityLabel("New conversation")
-                    }
-                }
-            }
+            // Like Today, Activity and Body: no empty bar above the title. New chat lives in the header.
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: Binding(get: { ask.pendingQuestion != nil },
                                         set: { if !$0 && ask.pendingQuestion != nil { ask.resolveConsent(false, app: app) } })) {
                 AIConsentSheet { allowed in ask.resolveConsent(allowed, app: app) }
@@ -78,7 +71,20 @@ struct AskView: View {
                 Text("Ask Blith").font(Typo.pageTitle).foregroundStyle(Palette.ink)
             }
             Spacer()
-            AssistantOrb(active: responding, size: 54)
+            if app.ask.messages.isEmpty {
+                AssistantOrb(active: responding, size: 54)
+            } else {
+                Button { app.ask.clear() } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
+                }
+                .glassButton()
+                .buttonBorderShape(.circle)
+                .accessibilityLabel("New conversation")
+            }
         }
     }
 
