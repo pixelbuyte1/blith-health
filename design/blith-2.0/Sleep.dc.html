@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blith 2.0 · Sleep</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.bl{--base:#0C1014;--surface:#131920;--raised:#1A222B;--line:rgba(241,244,246,0.08);--line2:rgba(241,244,246,0.16);--t1:#F1F4F6;--t2:#A9B4BF;--t3:#97A3AF;--act:#D9CDB8;--actink:#0C1014;--primed:#3FD0B0;--steady:#F2B53E;--strained:#F0545E;--load:#4DA3F7;--sleep:#8C9BF0;--vitals:#7CCBE6;--deep:#4F67BD;--core:#7F95E3;--rem:#B5C4F5;--band:rgba(169,180,191,0.17);--track:rgba(241,244,246,0.07);--glass:rgba(24,31,39,0.74);--shadow:rgba(0,0,0,0.38);-webkit-font-smoothing:antialiased}
+.bl[data-theme="light"]{--base:#F4F2EE;--surface:#FFFFFF;--raised:#ECE9E3;--line:rgba(18,23,27,0.08);--line2:rgba(18,23,27,0.16);--t1:#12171B;--t2:#4B5762;--t3:#5F6B76;--act:#12171B;--actink:#F4F2EE;--primed:#077A67;--steady:#946000;--strained:#C4283C;--load:#0B63C5;--sleep:#4F5FC4;--vitals:#16708F;--deep:#34489A;--core:#5F78D6;--rem:#9FB2EE;--band:rgba(75,87,98,0.13);--track:rgba(18,23,27,0.06);--glass:rgba(255,255,255,0.8);--shadow:rgba(18,23,27,0.12)}
+.bl .n{font-stretch:75%;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.015em;line-height:0.86}
+.bl .cap{font-size:12px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t3)}
+.bl button{font-family:inherit}
+</style>
+</helmet>
+<div class="bl" data-theme="{{theme}}" style="position: relative; width: 390px; height: 1760px; overflow: hidden; box-sizing: border-box; padding: 62px 16px 0; background: var(--base); color: var(--t1); font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; gap: 28px">
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span class="cap">Mon 5 → Tue 6 October</span>
+<h1 style="margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em">Sleep</h1>
+</div>
+<div style="display: flex; gap: 8px">
+<button aria-label="Previous night" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: 1px solid var(--line2); background: var(--surface); color: var(--t1); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button aria-label="Next night" disabled style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: 1px solid var(--line); background: transparent; color: var(--t3); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</div>
+</header>
+
+<section aria-label="Time asleep" style="display: flex; flex-direction: column; gap: 14px">
+<span class="cap">Asleep</span>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<span style="display: flex; align-items: baseline; gap: 4px; color: var(--t1)"><span class="n" style="font-size: 104px">7</span><span style="font-size: 30px; font-weight: 600; color: var(--t2); margin-right: 10px">h</span><span class="n" style="font-size: 104px">42</span><span style="font-size: 30px; font-weight: 600; color: var(--t2)">m</span></span>
+<span style="display: flex; align-items: center; gap: 5px; padding-bottom: 10px; font-size: 16px; font-weight: 650; color: var(--sleep)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 14l6-6 6 6"></path></svg>Above usual</span>
+</div>
+<div style="position: relative; height: 46px">
+<div style="position: absolute; left: 0; right: 0; top: 12px; height: 8px; border-radius: 4px; background: var(--track)"></div>
+<div style="position: absolute; left: {{hero.bandL}}; width: {{hero.bandW}}; top: 8px; height: 16px; border-radius: 5px; background: var(--band); box-shadow: inset 0 0 0 1px var(--line2)"></div>
+<div style="position: absolute; left: 0; width: {{hero.mark}}; top: 12px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--sleep) 38%, transparent)"></div>
+<div style="position: absolute; left: {{hero.mark}}; top: 3px; width: 4px; height: 26px; margin-left: -2px; border-radius: 2px; background: var(--sleep)"></div>
+<span style="position: absolute; left: 0; top: 32px; font-size: 12px; color: var(--t3)">4h</span>
+<span style="position: absolute; left: {{hero.bandMid}}; top: 32px; transform: translateX(-50%); font-size: 12px; color: var(--t3); white-space: nowrap">usual 6h 50m–7h 30m</span>
+<span style="position: absolute; right: 0; top: 32px; font-size: 12px; color: var(--t3)">10h</span>
+</div>
+<p style="margin: 0; font-size: 17px; line-height: 1.45; color: var(--t2)">In bed 11:04 pm – 7:12 am. Awake for 26 min across 4 short wakes.</p>
+</section>
+
+<section aria-label="Sleep stages" style="padding: 18px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px">
+<span class="cap">Stages</span>
+<div style="display: flex; gap: 10px">
+<div style="flex: none; width: 50px; display: flex; flex-direction: column; gap: 6px; padding-top: 2px">
+<span style="height: 26px; display: flex; align-items: center; font-size: 12px; color: var(--t3)">Awake</span>
+<span style="height: 26px; display: flex; align-items: center; font-size: 12px; color: var(--t3)">REM</span>
+<span style="height: 26px; display: flex; align-items: center; font-size: 12px; color: var(--t3)">Core</span>
+<span style="height: 26px; display: flex; align-items: center; font-size: 12px; color: var(--t3)">Deep</span>
+</div>
+<div style="flex: none; width: 262px">
+<svg width="262" height="128" viewBox="0 0 262 128" role="img" aria-label="Hypnogram from 11:04 pm to 7:12 am">
+<rect x="0" y="2" width="262" height="26" rx="4" style="fill: var(--track)"></rect>
+<rect x="0" y="34" width="262" height="26" rx="4" style="fill: var(--track)"></rect>
+<rect x="0" y="66" width="262" height="26" rx="4" style="fill: var(--track)"></rect>
+<rect x="0" y="98" width="262" height="26" rx="4" style="fill: var(--track)"></rect>
+<path d="{{hyp.links}}" style="stroke: var(--line2); stroke-width: 1"></path>
+<path d="{{hyp.deep}}" style="fill: var(--deep)"></path>
+<path d="{{hyp.core}}" style="fill: var(--core)"></path>
+<path d="{{hyp.rem}}" style="fill: var(--rem)"></path>
+<path d="{{hyp.awake}}" style="fill: none; stroke: var(--t2); stroke-width: 1.4"></path>
+</svg>
+<div style="position: relative; height: 16px; margin-top: 6px">
+<sc-for list="{{hyp.ticks}}" as="t" hint-placeholder-count="5">
+<span style="position: absolute; left: {{t.left}}; transform: {{t.tf}}; font-size: 11px; color: var(--t3); white-space: nowrap">{{t.t}}</span>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{stages}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line)">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--t1)"><span style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 3px; background: {{s.fill}}; border: {{s.border}}"></span>{{s.name}}</span>
+<span style="display: flex; align-items: baseline; gap: 10px"><span style="font-size: 13px; color: var(--t3)">{{s.usual}}</span><span class="n" style="font-size: 24px">{{s.dur}}</span></span>
+</div>
+<div style="position: relative; height: 10px">
+<div style="position: absolute; left: 0; right: 0; top: 3px; height: 4px; border-radius: 2px; background: var(--track)"></div>
+<div style="position: absolute; left: {{s.bar.bandL}}; width: {{s.bar.bandW}}; top: 1px; height: 8px; border-radius: 4px; background: var(--band)"></div>
+<div style="position: absolute; left: {{s.bar.mark}}; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 5px; background: {{s.mark}}; box-shadow: 0 0 0 2px var(--surface)"></div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-label="Schedule" style="padding: 18px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span class="cap">Last 14 nights</span>
+<span style="font-size: 13px; color: var(--t3)">12 of 14 recorded</span>
+</div>
+<svg width="322" height="196" viewBox="0 0 322 196" role="img" aria-label="Bedtime and wake time for 14 nights against your usual windows">
+<rect x="0" y="{{sched.bedY}}" width="288" height="{{sched.bedH}}" rx="3" style="fill: var(--band)"></rect>
+<rect x="0" y="{{sched.wakeY}}" width="288" height="{{sched.wakeH}}" rx="3" style="fill: var(--band)"></rect>
+<path d="{{sched.mid}}" style="stroke: var(--line2); stroke-width: 1; stroke-dasharray: 3 4"></path>
+<path d="{{sched.bars}}" style="fill: var(--sleep); opacity: 0.5"></path>
+<path d="{{sched.last}}" style="fill: var(--sleep)"></path>
+<path d="{{sched.missing}}" style="fill: none; stroke: var(--t3); stroke-width: 1.2; stroke-dasharray: 3 3"></path>
+<text x="322" y="{{sched.l10}}" text-anchor="end" style="fill: var(--t3); font-size: 11px">10 pm</text>
+<text x="322" y="{{sched.l12}}" text-anchor="end" style="fill: var(--t3); font-size: 11px">12 am</text>
+<text x="322" y="{{sched.l7}}" text-anchor="end" style="fill: var(--t3); font-size: 11px">7 am</text>
+</svg>
+<div style="display: flex; justify-content: space-between; width: 288px; font-size: 11px; color: var(--t3)"><span>23 Sep</span><span style="color: var(--t1); font-weight: 600">Last night</span></div>
+<p style="margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 17px; line-height: 1.45; color: var(--t1)">On the 3 nights you went to bed after midnight, you spent 55 min less in bed. <span style="color: var(--t2)">Bands show your usual bedtime and wake time.</span></p>
+</section>
+
+<section aria-label="Overnight" style="display: flex; flex-direction: column; gap: 12px">
+<span class="cap">Overnight</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{vitals}}" as="v" hint-placeholder-count="4">
+<div style="padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 13px; color: var(--t2)">{{v.name}}</span>
+<span style="display: flex; align-items: baseline; gap: 4px"><span class="n" style="font-size: 32px">{{v.value}}</span><span style="font-size: 13px; color: var(--t3)">{{v.unit}}</span></span>
+<div style="position: relative; height: 10px">
+<div style="position: absolute; left: 0; right: 0; top: 3px; height: 4px; border-radius: 2px; background: var(--track)"></div>
+<div style="position: absolute; left: {{v.bar.bandL}}; width: {{v.bar.bandW}}; top: 1px; height: 8px; border-radius: 4px; background: var(--band)"></div>
+<div style="position: absolute; left: {{v.bar.mark}}; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 5px; background: var(--vitals); box-shadow: 0 0 0 2px var(--surface)"></div>
+</div>
+<span style="font-size: 12px; color: var(--t3)">{{v.usual}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<nav aria-label="Tabs" style="position: absolute; left: 16px; right: 16px; bottom: 28px; height: 64px; box-sizing: border-box; padding: 6px; border-radius: 32px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5); border: 1px solid var(--line2); box-shadow: 0 12px 32px var(--shadow); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<a href="{{t.href}}" aria-current="{{t.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 26px; background: {{t.bg}}; color: {{t.color}}; font-size: 11px; font-weight: 600; text-decoration: none">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"></path></svg>
+<span>{{t.label}}</span>
+</a>
+</sc-for>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":1760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const f = (n) => n.toFixed(1);
+    const pct = (v, min, max) => (Math.max(0, Math.min(1, (v - min) / (max - min))) * 100).toFixed(1) + '%';
+    const range = (lo, hi, v, min, max) => ({ bandL: pct(lo, min, max), bandW: ((hi - lo) / (max - min) * 100).toFixed(1) + '%', mark: pct(v, min, max) });
+    const hb = range(410, 450, 462, 240, 600);
+    const hero = { ...hb, bandMid: pct(430, 240, 600) };
+
+    // Hypnogram, minutes from 11:04 pm (488 in bed)
+    const segs = [['awake', 0, 8], ['core', 8, 30], ['deep', 30, 75], ['core', 75, 110], ['rem', 110, 128], ['core', 128, 160], ['deep', 160, 195], ['core', 195, 230], ['awake', 230, 236], ['rem', 236, 268], ['core', 268, 310], ['deep', 310, 322], ['core', 322, 360], ['rem', 360, 402], ['core', 402, 430], ['awake', 430, 436], ['rem', 436, 470], ['core', 470, 482], ['awake', 482, 488]];
+    const HW = 262, T = 488, RH = 26;
+    const rowY = { awake: 2, rem: 34, core: 66, deep: 98 };
+    const hyp = { awake: '', rem: '', core: '', deep: '', links: '' };
+    const sx = (m) => m / T * HW;
+    segs.forEach(([s, a, b], i) => {
+      const inset = s === 'awake' ? 0.7 : 0;
+      const x0 = sx(a) + inset, w = Math.max(1.6, sx(b) - sx(a) - 1 - inset * 2);
+      const y0 = rowY[s] + inset, h = RH - inset * 2;
+      hyp[s] += 'M' + f(x0) + ' ' + f(y0) + 'h' + f(w) + 'v' + f(h) + 'h' + f(-w) + 'Z';
+      if (i > 0) {
+        const prev = segs[i - 1][0];
+        hyp.links += 'M' + f(sx(a) - 0.5) + ' ' + (rowY[prev] + RH / 2) + 'V' + (rowY[s] + RH / 2);
+      }
+    });
+    hyp.ticks = [['11 pm', -4], ['1 am', 116], ['3 am', 236], ['5 am', 356], ['7 am', 476]].map(([t, m], k) => ({
+      t, left: f(Math.max(0, sx(m))) + 'px', tf: k === 0 ? 'none' : 'translateX(-50%)'
+    }));
+
+    const stages = [
+      { name: 'Awake', fill: 'transparent', border: '1.5px solid var(--t2)', mark: 'var(--t2)', dur: '26m', usual: 'usual 15–35m', bar: range(15, 35, 26, 0, 60) },
+      { name: 'REM', fill: 'var(--rem)', border: '0', mark: 'var(--rem)', dur: '2h 06m', usual: 'usual 1h 35m–2h', bar: range(95, 120, 126, 40, 180) },
+      { name: 'Core', fill: 'var(--core)', border: '0', mark: 'var(--core)', dur: '4h 04m', usual: 'usual 3h 50m–4h 30m', bar: range(230, 270, 244, 150, 330) },
+      { name: 'Deep', fill: 'var(--deep)', border: '0', mark: 'var(--deep)', dur: '1h 32m', usual: 'usual 1h 05m–1h 30m', bar: range(65, 90, 92, 0, 150) }
+    ];
+
+    // Schedule: minutes after 9:30 pm, 660 = 8:30 am
+    const nights = [[100, 565], [120, 575], [85, 560], null, [170, 570], [95, 590], [130, 555], [195, 600], [90, 550], [105, 568], null, [155, 580], [110, 570], [94, 582]];
+    const PW = 288, step = PW / 14, BW = 12;
+    const yy = (m) => 6 + m / 660 * 184;
+    let bars = '', last = '', missing = '';
+    nights.forEach((n, i) => {
+      const x0 = i * step + (step - BW) / 2;
+      if (n === null) {
+        missing += 'M' + f(x0 + 0.6) + ' ' + f(yy(85)) + 'h' + f(BW - 1.2) + 'V' + f(yy(585)) + 'h' + f(-(BW - 1.2)) + 'Z';
+        return;
+      }
+      const r = 'M' + f(x0) + ' ' + f(yy(n[0])) + 'h' + BW + 'V' + f(yy(n[1])) + 'h' + (-BW) + 'Z';
+      if (i === nights.length - 1) last += r; else bars += r;
+    });
+    const sched = {
+      bars, last, missing,
+      bedY: f(yy(85)), bedH: f(yy(125) - yy(85)),
+      wakeY: f(yy(555)), wakeH: f(yy(585) - yy(555)),
+      mid: 'M0 ' + f(yy(150)) + 'H288',
+      l10: f(yy(30) + 4), l12: f(yy(150) + 4), l7: f(yy(570) + 4)
+    };
+
+    const vitals = [
+      { name: 'Lowest heart rate', value: '49', unit: 'bpm', usual: 'Usual 47–52', bar: range(47, 52, 49, 42, 58) },
+      { name: 'HRV', value: '58', unit: 'ms', usual: 'Usual 44–54 · above', bar: range(44, 54, 58, 30, 70) },
+      { name: 'Respiratory rate', value: '14.2', unit: '/min', usual: 'Usual 13.8–14.9', bar: range(13.8, 14.9, 14.2, 12, 17) },
+      { name: 'Wrist temperature', value: '+0.1', unit: '°C', usual: 'Usual −0.3 to +0.3', bar: range(-0.3, 0.3, 0.1, -1, 1) }
+    ];
+
+    const IC = {
+      Today: 'M3 17h18M7 17a5 5 0 0 1 10 0M12 6v3M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8',
+      Trends: 'M3 20h18M4 15l5-5 4 3 7-7',
+      Sleep: 'M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z',
+      Body: 'M12 3.5a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4ZM6.5 10.5h11M12 10.5v4.5M12 15l-3 5.5M12 15l3 5.5',
+      Ask: 'M4.5 5.5h15v10h-8.5l-4 3.5v-3.5h-2.5Z'
+    };
+    const files = { Today: 'Main.dc.html', Trends: 'Trends.dc.html', Sleep: 'Sleep.dc.html', Body: 'Body.dc.html', Ask: 'Ask.dc.html' };
+    const ACTIVE = 'Sleep';
+    const tabs = Object.keys(IC).map((k) => ({ label: k, href: files[k], icon: IC[k], color: k === ACTIVE ? 'var(--t1)' : 'var(--t3)', bg: k === ACTIVE ? 'var(--line)' : 'transparent', current: k === ACTIVE ? 'page' : 'false' }));
+    return { theme: this.props.theme ?? 'dark', hero, hyp, stages, sched, vitals, tabs };
+  }
+}
+</script>
+</body>
+</html>

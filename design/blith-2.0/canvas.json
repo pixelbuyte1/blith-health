@@ -1,0 +1,22 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-06T17:00:53Z" },
+  "title": "Blith 2.0",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 1720, "title": "Today", "is_interactive": true, "radius": 28 },
+    "Trends.dc.html": { "x": 470, "y": 0, "w": 390, "h": 1480, "title": "Trends", "is_interactive": true, "radius": 28 },
+    "Sleep.dc.html": { "x": 940, "y": 0, "w": 390, "h": 1760, "title": "Sleep", "is_interactive": true, "radius": 28 },
+    "Body.dc.html": { "x": 1410, "y": 0, "w": 390, "h": 1560, "title": "Body", "is_interactive": true, "radius": 28 },
+    "Ask.dc.html": { "x": 1880, "y": 0, "w": 390, "h": 980, "title": "Ask", "is_interactive": true, "radius": 28 },
+    "TodayLight.dc.html": { "x": 0, "y": 2100, "w": 390, "h": 844, "title": "Today · light", "is_interactive": true, "radius": 28 },
+    "System.dc.html": { "x": 470, "y": 2100, "w": 1200, "h": 1400, "title": "System" }
+  },
+  "order": ["Main.dc.html", "Trends.dc.html", "Sleep.dc.html", "Body.dc.html", "Ask.dc.html", "TodayLight.dc.html", "System.dc.html"],
+  "notes": {
+    "row1": { "x": 0, "y": -300, "text": "Blith 2.0 · five tabs, dark first", "kind": "title1", "maxW": 2270 },
+    "row2": { "x": 0, "y": 1840, "text": "Light mode and the system", "kind": "title1", "maxW": 1670 }
+  },
+  "designSystems": []
+}
