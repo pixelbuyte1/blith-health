@@ -843,7 +843,7 @@ UNCOVER = (('External abdominal oblique', 'Rectus abdominis'), ('Internal abdomi
 ABDOMEN_MUSCLES = ('Rectus abdominis', 'External abdominal oblique', 'Internal abdominal oblique')
 
 
-def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03):
+def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03, margin=0.008):
     """Runs on the full-detail parts, before the visibility passes, so the uncovered muscle gets the
     triangle budget of a visible one. A sheet triangle (either face of the sheet) is dropped when
     the muscle underneath lies straight behind it, seen from the front, within `depth`."""
@@ -864,6 +864,12 @@ def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03):
                 if ids:
                     dz = c[k, 2] - U[ids, 2]
                     over[k] = bool(((dz > -0.002) & (dz < depth)).any())
+            # Keep a strip of the sheet over the muscle's outer, upper and lower edges, so the sheet
+            # overlaps the edge instead of leaving a dark gap where the deeper muscle begins.
+            side_out = np.sign(c[:, 0])[:, None] * np.array([1.0, 0.0])
+            for off in (side_out * margin, np.array([0.0, margin]), np.array([0.0, -margin])):
+                hit = tree.query(c[:, :2] + off)[0] < reach
+                over &= hit
             q['V'], q['F'] = compact(q['V'], q['F'][~over])
             print(f"  {cover} ({side}): {int(over.sum())} of {len(over)} triangles in front of {under} dropped")
 
