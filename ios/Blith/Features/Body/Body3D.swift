@@ -468,15 +468,33 @@ final class BodySceneController: NSObject {
         if layer == .muscle { cameraNode.camera?.screenSpaceAmbientOcclusionIntensity = style.occlusion }
     }
 
+    /// Regions of today's planned workout (indices into `meta.regions`) and how strongly they glow.
+    private var plannedRegions = Set<Int>()
+    private var plannedStrength: Float = 0.8
+    private var lastRegion: BodyRegion?
+    private var lastMuscle: Body3DModel.Muscle?
+
+    /// Lights today's workout regions whenever nothing is selected; calmer once the day is ticked done.
+    func setPlanned(_ regions: Set<BodyRegion>, done: Bool) {
+        plannedRegions = Set(regions.compactMap(model.regionIndex))
+        plannedStrength = done ? 0.3 : 0.8
+        highlight(lastRegion, muscle: lastMuscle)
+    }
+
     /// Selection states. Figure layer: the region glows. Muscle layer: a chosen muscle turns radiant
     /// blue and everything else dims a little; a region without a muscle lights the edges of its
     /// muscles (the touch state). Nothing selected is the calm resting state.
     func highlight(_ region: BodyRegion?, muscle: Body3DModel.Muscle? = nil) {
+        lastRegion = region
+        lastMuscle = muscle
         let r = region.flatMap(model.regionIndex)
-        for (i, g) in model.skin.groups.enumerated() {
-            skinMaterials[i].setValue(r != nil && g.region == r ? Float(1) : Float(0), forKey: "highlight")
-        }
         let mi = muscle.flatMap(model.muscleIndex)
+        // With nothing selected, today's planned workout regions glow softly.
+        let showPlan = r == nil && mi == nil
+        for (i, g) in model.skin.groups.enumerated() {
+            let value: Float = r != nil && g.region == r ? 1 : (showPlan && plannedRegions.contains(g.region) ? plannedStrength : 0)
+            skinMaterials[i].setValue(value, forKey: "highlight")
+        }
         let headOnly = mi == nil && region == .head && headNode.geometry != nil
         let active = r != nil || mi != nil
         for (i, g) in model.muscle.groups.enumerated() where !hiddenGroups.contains(i) {
@@ -485,6 +503,8 @@ final class BodySceneController: NSObject {
                 next.highlight = g.muscle == mi ? 1 : 0
             } else if let r, !headOnly {
                 next.press = g.region == r ? 1 : 0
+            } else if showPlan, plannedRegions.contains(g.region) {
+                next.press = plannedStrength
             }
             next.dim = active && next.highlight + next.press == 0 ? 1 : 0
             Self.transition(muscleMaterials[i], from: muscleState[i], to: next)

@@ -23,6 +23,8 @@ struct BodyView: View {
     @State private var panelRequest = 0
     @AppStorage("BlithBodyStyle") private var styleRaw = AnatomyStyle.radiant.rawValue
     @AppStorage("BlithBodyCoachVisits") private var coachVisits = 0
+    @AppStorage(WorkoutPlanStore.key) private var planRaw = ""
+    @State private var editingPlan = false
 
     var style: AnatomyStyle { AnatomyStyle(rawValue: styleRaw) ?? .radiant }
 
@@ -37,6 +39,7 @@ struct BodyView: View {
                     VStack(alignment: .leading, spacing: Space.l) {
                         header
                         stage
+                        WorkoutTodayCard(planRaw: $planRaw, today: today) { editingPlan = true }
                         regionPanel.id("bodyPanel")
                         timeline
                         historyList
@@ -58,6 +61,8 @@ struct BodyView: View {
                     }
                 }
                 .sheet(isPresented: $showRegions) { regionList }
+                .sheet(isPresented: $editingPlan) { WorkoutPlanEditor(planRaw: $planRaw) }
+                .onChange(of: planRaw) { _, _ in syncPlan() }
                 .onAppear {
                     visible = true
                     setUp()
@@ -123,10 +128,17 @@ struct BodyView: View {
         if let l = UserDefaults.standard.string(forKey: "BlithBodyLayer").flatMap(BodyLayer.init(rawValue:)) { layer = l }
         controller.setStyle(style)
         controller.setLayer(layer)
+        syncPlan()
         if UserDefaults.standard.object(forKey: "BlithBodyYaw") != nil {
             controller.setYaw(Float(UserDefaults.standard.double(forKey: "BlithBodyYaw")) * .pi / 180, animated: false)
         }
         syncMarkers()
+    }
+
+    /// Today's planned muscles glow on the figure; calmer once ticked done.
+    func syncPlan() {
+        let plan = WorkoutPlan.decode(planRaw)
+        controller?.setPlanned(plan.regions(on: today), done: plan.isDone(today))
     }
 
     func syncMarkers() {

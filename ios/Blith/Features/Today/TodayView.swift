@@ -43,6 +43,7 @@ struct TodayView: View {
                         if hero == .movement { readinessNote(s) }
                         scoreTiles(s)
                         LiveHeartCard(live: app.liveHeart, isDemo: app.isDemo).id("live")
+                        WorkoutTodayRow(today: s.ctx.today)
                         if hero != .movement { movementCard(s).id("movement") }
                         worthALook(s).id("insight")
                         overnight(s).id("monitor")
