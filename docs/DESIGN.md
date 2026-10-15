@@ -158,3 +158,12 @@ Missing data and real zero always look different.
 - LIVE means the reading is under 90 s old. Older readings show how long ago they were, dimmer; after 30 minutes the heart holds still.
 - Reduce Motion stops the pounding but keeps the number and zone.
 - The check-in streak is now a small chip beside the avatar; it replaced the streak and walking-week tiles.
+
+## Training week (Body)
+
+The person sets a weekly split (chest on Monday, legs on Wednesday…) from a preset or by hand. On a
+training day, that day's muscle groups glow on the body figure in the anatomy blue whenever nothing is
+selected. A card under the figure reads "Chest day" with a tick circle, and Today shows the same row. A
+ticked day glows calmer. The card also shows the last seven days (filled = done, outlined = planned) and
+"4 of the last 5 planned sessions done". The plan and ticks stay on this iPhone (`BlithWorkoutPlan`), and
+are separate from body notes, which are for how the body feels.
