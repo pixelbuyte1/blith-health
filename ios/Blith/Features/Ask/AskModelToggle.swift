@@ -50,7 +50,7 @@ struct AskModelToggle: View {
             ForEach(AskModelChoice.allCases) { m in
                 let on = selection == m
                 Button {
-                    guard !on else { return }
+                    // Tapping the side already shown still pins it, so automatic mode stops switching.
                     pick(m)
                 } label: {
                     HStack(spacing: 5) {

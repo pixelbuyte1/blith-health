@@ -127,7 +127,7 @@ struct AskView: View {
         return VStack(spacing: Space.s) {
             if showTags {
                 AskTagPanel(tagged: ask.tags) { tag in
-                    app.ask.toggleTag(tag)
+                    app.ask.addTag(tag)
                     showTags = false
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))

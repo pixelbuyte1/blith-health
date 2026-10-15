@@ -117,7 +117,8 @@ for DEV in "$SMALL" "$LARGE"; do
   shoot "$UDID" "$NAME-L05-sleep" "${DEMO[@]}" -BlithTab sleep
   shoot "$UDID" "$NAME-L12-ask" "${DEMO[@]}" -BlithTab ask -BlithAskScript YES
   shoot "$UDID" "$NAME-L12b-ask-bodynote" "${DEMO[@]}" -BlithTab ask -BlithAskNote YES
-  if [ "$UDID" = "${LARGE%%|*}" ]; then record_tour "$UDID" "${DEMO[@]}"; fi
+  # The tour video costs about 2 build minutes, so it only runs when asked (RECORD_TOUR=1).
+  if [ "${RECORD_TOUR:-0}" = "1" ] && [ "$UDID" = "${LARGE%%|*}" ]; then record_tour "$UDID" "${DEMO[@]}"; fi
   xcrun simctl ui "$UDID" appearance dark
   # Keep any crash reports and SceneKit/Metal errors from this device for debugging.
   xcrun simctl spawn "$UDID" log show --last 20m --style compact --predicate 'process == "Blith" AND (messageType == error OR messageType == fault)' \
