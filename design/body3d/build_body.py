@@ -478,8 +478,10 @@ HEAD_BONES = ('ethmoid', 'frontal bone', 'occipital', 'parietal', 'temporal bone
               'canine', 'premolar')
 NECK_BONES = ('atlas', 'axis', 'cervical vertebra', 'hyoid')
 ARM_BONES = ('humerus', 'radius', 'ulna', 'capitate', 'hamate', 'lunate', 'pisiform', 'scaphoid', 'trapezium',
-             'trapezoid', 'triquetral', 'metacarpal', 'finger', 'thumb', 'of hand')
-LEG_BONES = ('femur', 'patella', 'tibia', 'fibula', 'calcaneus', 'talus', 'cuboid', 'cuneiform', 'of foot', 'metatarsal',
+             'trapezoid', 'triquetral', 'metacarpal', 'finger', 'thumb', 'hand')
+# 'foot' and 'hand', not 'of foot': BodyParts3D names some bones "Navicular bone of left foot", and
+# those fell through to the trunk, which labelled the sole of the foot as Hips.
+LEG_BONES = ('femur', 'patella', 'tibia', 'fibula', 'calcaneus', 'talus', 'cuboid', 'cuneiform', 'foot', 'metatarsal',
              'toe', 'hallux')
 PARTS = ['head', 'neck', 'trunk', 'armL', 'armR', 'legL', 'legR']
 
@@ -832,6 +834,62 @@ def rectus_to_midline(V, gap=0.0012):
     return V
 
 
+# Sheets that lie over another muscle. The part of the sheet directly above it is dropped, so the
+# muscle underneath can be seen and tapped: both obliques' aponeuroses cover the rectus abdominis
+# in the source model, which made the whole half of the abdomen one tap target.
+UNCOVER = (('External abdominal oblique', 'Rectus abdominis'), ('Internal abdominal oblique', 'Rectus abdominis'))
+
+
+ABDOMEN_MUSCLES = ('Rectus abdominis', 'External abdominal oblique', 'Internal abdominal oblique')
+
+
+def uncover(parts, pairs=UNCOVER, reach=0.006, depth=0.03, margin=0.008):
+    """Runs on the full-detail parts, before the visibility passes, so the uncovered muscle gets the
+    triangle budget of a visible one. A sheet triangle (either face of the sheet) is dropped when
+    the muscle underneath lies straight behind it, seen from the front, within `depth`."""
+    named = [(pretty(q['name'])[0], pretty(q['name'])[1]) for q in parts]
+    for cover, under in pairs:
+        for q, (name, side) in zip(parts, named):
+            if name != cover:
+                continue
+            U = [p['V'] for p, (n2, s2) in zip(parts, named) if n2 == under and s2 == side]
+            if not U:
+                continue
+            U = np.concatenate(U)
+            tree = cKDTree(U[:, :2])
+            P = q['V'][q['F']]
+            c = P.mean(1)
+            over = np.zeros(len(c), bool)
+            for k, ids in enumerate(tree.query_ball_point(c[:, :2], reach)):
+                if ids:
+                    dz = c[k, 2] - U[ids, 2]
+                    over[k] = bool(((dz > -0.002) & (dz < depth)).any())
+            # Keep a strip of the sheet over the muscle's outer, upper and lower edges, so the sheet
+            # overlaps the edge instead of leaving a dark gap where the deeper muscle begins.
+            side_out = np.sign(c[:, 0])[:, None] * np.array([1.0, 0.0])
+            for off in (side_out * margin, np.array([0.0, margin]), np.array([0.0, -margin])):
+                hit = tree.query(c[:, :2] + off)[0] < reach
+                over &= hit
+            q['V'], q['F'] = compact(q['V'], q['F'][~over])
+            print(f"  {cover} ({side}): {int(over.sum())} of {len(over)} triangles in front of {under} dropped")
+
+
+def split_at_navel(mparts, y_navel, name='Rectus abdominis'):
+    """Each rectus abdominis becomes an upper and a lower part at the navel, so the front of the
+    abdomen is four tap targets."""
+    out = []
+    for q in mparts:
+        if q['name'] != name:
+            out.append(q)
+            continue
+        up = q['V'][q['F']].mean(1)[:, 1] >= y_navel
+        for mask, label in ((up, 'upper'), (~up, 'lower')):
+            if mask.sum() >= 20:
+                V_, F_ = compact(q['V'], q['F'][mask])
+                out.append(dict(q, V=V_, F=F_, name=f'{name} ({label} part)'))
+    return out
+
+
 def sphere_dirs():
     dirs = [[0, 1, 0], [0, -1, 0]]
     for el in (-35, 0, 35):
@@ -1081,6 +1139,8 @@ def main():
             q['V'] = rectus_to_midline(q['V'])
         if face_weight(q['V']).mean() > 0.5:               # soften the scan-like facial rings
             q['V'] = taubin(q['V'], q['F'], iters=12)
+    uncover(parts)
+    for q in parts:
         q['pre'] = decimate(q['V'], q['F'], max(250, len(q['F']) * 0.4))
     pre = [dict(V=q['pre'][0], F=q['pre'][1]) for q in parts]
     V, F, pid = merge(pre)
@@ -1107,10 +1167,14 @@ def main():
         name, side, kind = pretty(parts[i]['name'])
         mparts.append(dict(V=V_, F=F_, name=name, side=side, kind=kind, src=parts[i]['name']))
 
+    mparts = split_at_navel(mparts, L.y_navel)
+
     # regions for muscle triangles: region of the nearest skin point
     for q in mparts:
         _, j = stree.query(q['V'][q['F']].mean(1))
         q['treg'] = s_lab[j]
+        if q['name'].startswith(ABDOMEN_MUSCLES):           # the lower belly is abdomen, not hips
+            q['treg'] = np.where(q['treg'] == RI['hips'], RI['abdomen'], q['treg'])
         area = tri_area(q['V'], q['F'])
         q['region'] = int(np.bincount(q['treg'], weights=area, minlength=len(REGION_IDS)).argmax())
     _, j = stree.query(uV[uF].mean(1))
