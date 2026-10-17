@@ -152,10 +152,11 @@ Missing data and real zero always look different.
 
 `LiveHeartCard` sits under the readiness hero and the sleep and load tiles. It streams heart rate from Apple Health (`HKAnchoredObjectQuery`), so it is exactly as live as the source: an Apple Watch records every few minutes at rest and every few seconds during a Workout.
 
-- The heart pounds at the measured BPM: a "lub-dub" every 60/BPM seconds, eased between readings so it never jumps. It is drawn in `Palette.heart`.
-- The beat swells harder as intensity rises above the person's own resting rate. Zones (Resting, Warm, Elevated, Hard, Peak) are intensity labels, not health judgements; they share one heart tint that strengthens with the zone, and the word always says which zone.
-- No synthetic ECG trace: the card shows only what was measured.
-- LIVE means the reading is under 90 s old. Older readings show how long ago they were, dimmer; after 30 minutes the heart holds still.
+- Layout: a small flat heart beside the BPM number, an ECG-style strip under them, and "Warm · resting 57" (zone and resting rate) top right. No glow behind the heart while a reading is live or recent.
+- The heart pounds at the measured BPM: a "lub-dub" every 60/BPM seconds, eased between readings so it never jumps. It is drawn in `Palette.heart`, flat.
+- The beat swells harder as intensity rises above the person's own resting rate. Zones (Resting, Warm, Elevated, Hard, Peak) are intensity labels, not health judgements, and are always said in words.
+- The strip is an illustration of the rhythm at the measured rate, not an ECG recording: its spacing follows the BPM and its spike lands with the "lub". It is never labelled or described as an ECG.
+- While live the corner shows the zone; older readings show how long ago they were instead, dimmer; after 30 minutes the heart and strip hold still.
 - Reduce Motion stops the pounding but keeps the number and zone.
 - The check-in streak is now a small chip beside the avatar; it replaced the streak and walking-week tiles.
 
