@@ -153,7 +153,7 @@ Missing data and real zero always look different.
 `LiveHeartCard` sits under the readiness hero and the sleep and load tiles. It streams heart rate from Apple Health (`HKAnchoredObjectQuery`), so it is exactly as live as the source: an Apple Watch records every few minutes at rest and every few seconds during a Workout.
 
 - Layout: a small flat heart beside the BPM number, an ECG-style strip under them, and "Warm · resting 57" (zone and resting rate) top right. No glow behind the heart while a reading is live or recent.
-- The heart pounds at the measured BPM: a "lub-dub" every 60/BPM seconds, eased between readings so it never jumps. It is drawn in `Palette.heart`, flat.
+- The heart pounds at the measured BPM: a "lub-dub" every 60/BPM seconds, eased between readings so it never jumps. It is the system heart (SF Symbols `heart.fill`) in `Palette.heart`, flat.
 - The beat swells harder as intensity rises above the person's own resting rate. Zones (Resting, Warm, Elevated, Hard, Peak) are intensity labels, not health judgements, and are always said in words.
 - The strip is an illustration of the rhythm at the measured rate, not an ECG recording: its spacing follows the BPM and its spike lands with the "lub". It is never labelled or described as an ECG.
 - While live the corner shows the zone; older readings show how long ago they were instead, dimmer; after 30 minutes the heart and strip hold still.

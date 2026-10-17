@@ -32,7 +32,6 @@ struct LiveHeartCard: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var clock = BeatClock()
 
-    private let heartArea: CGFloat = 132
     /// The monitoring heart sits beside the number, about as tall as the digits.
     private let heartBox: CGFloat = 64
     private let ecgHeight: CGFloat = 64
@@ -95,11 +94,7 @@ struct LiveHeartCard: View {
             let beat = animating ? clock.advance(to: tl.date, target: bpm) : (phase: 0.86, bpm: bpm)
             VStack(alignment: .leading, spacing: Space.s) {
                 HStack(alignment: .center, spacing: Space.m) {
-                    Canvas { ctx, size in
-                        drawHeart(&ctx, center: CGPoint(x: size.width / 2, y: size.height / 2), radius: heartBox * 0.38,
-                                  phase: beat.phase, intensity: s.intensity, freshness: s.freshness, glow: false)
-                    }
-                    .frame(width: heartBox, height: heartBox)
+                    heart(phase: beat.phase, intensity: s.intensity, freshness: s.freshness)
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(Int(bpm.rounded()))")
                             .font(Typo.score(60, weight: .regular)).foregroundStyle(Palette.ink)
@@ -119,21 +114,19 @@ struct LiveHeartCard: View {
         .accessibilityValue(s.freshness == .live ? "Live" : "Last reading \(ageText(s.age(now: Date()) ?? 0)) ago")
     }
 
-    /// One flat heart in the heart colour. `glow` adds the soft underlay, used only when nothing is
-    /// being monitored.
-    func drawHeart(_ ctx: inout GraphicsContext, center: CGPoint, radius: CGFloat, phase: Double, intensity: Double,
-                   freshness: LiveHeartSummary.Freshness, glow: Bool) {
+    /// The system heart (SF Symbols `heart.fill`), flat in the heart colour. It swells with each
+    /// "lub-dub", harder as intensity rises above the person's resting rate.
+    func heart(phase: Double, intensity: Double, freshness: LiveHeartSummary.Freshness) -> some View {
         let thump = HeartWaveform.thump(phase: phase)
-        let dim = freshness == .live ? 1.0 : (freshness == .recent ? 0.9 : 0.6)
-        // Harder beats at higher intensity: the heart swells more.
         let scale = 1 + (0.09 + 0.15 * intensity) * thump
-        let tint = Palette.heart
-        if glow {
-            ctx.fill(Path(ellipseIn: CGRect(x: center.x - radius * 2.1, y: center.y - radius * 2.1, width: radius * 4.2, height: radius * 4.2)),
-                     with: .radialGradient(Gradient(colors: [tint.opacity(0.18), .clear]),
-                                           center: center, startRadius: 0, endRadius: radius * 1.7))
-        }
-        ctx.fill(Self.heartPath(center: center, halfWidth: radius * scale), with: .color(tint.opacity(dim)))
+        let dim = freshness == .live ? 1.0 : (freshness == .recent ? 0.9 : 0.6)
+        return Image(systemName: "heart.fill")
+            .resizable().scaledToFit()
+            .foregroundStyle(Palette.heart.opacity(dim))
+            .frame(width: heartBox * 0.78, height: heartBox * 0.78)
+            .scaleEffect(scale)
+            .frame(width: heartBox, height: heartBox)
+            .accessibilityHidden(true)
     }
 
     /// An ECG strip scrolling right to left: about four seconds of trace, its R spike landing at the
@@ -158,33 +151,21 @@ struct LiveHeartCard: View {
         ctx.stroke(trace, with: .color(Palette.heart.opacity(dim)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
     }
 
-    /// The classic parametric heart, centred and scaled to `halfWidth`.
-    static func heartPath(center: CGPoint, halfWidth: CGFloat) -> Path {
-        let s = halfWidth / 16
-        var p = Path()
-        for i in 0...96 {
-            let t = Double(i) / 96 * 2 * .pi
-            let x = 16 * pow(sin(t), 3)
-            let y = -(13 * cos(t) - 5 * cos(2 * t) - 2 * cos(3 * t) - cos(4 * t))
-            let pt = CGPoint(x: center.x + CGFloat(x) * s, y: center.y + (CGFloat(y) - 4.4) * s)
-            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
-        }
-        p.closeSubpath()
-        return p
-    }
-
     // MARK: Empty states
 
     @ViewBuilder
     var emptyState: some View {
         HStack(alignment: .center, spacing: Space.l) {
-            Canvas { ctx, size in
-                drawHeart(&ctx, center: CGPoint(x: size.width / 2, y: size.height / 2), radius: 40,
-                          phase: 0.86, intensity: 0, freshness: .stale, glow: true)
+            // Nothing is being monitored: the same heart, quieter, with a soft glow behind it.
+            ZStack {
+                Circle().fill(RadialGradient(colors: [Palette.heart.opacity(0.18), .clear], center: .center, startRadius: 0, endRadius: 46))
+                Image(systemName: "heart.fill")
+                    .resizable().scaledToFit()
+                    .foregroundStyle(Palette.heart.opacity(0.6))
+                    .frame(width: 56, height: 56)
             }
-            .frame(width: heartArea, height: heartArea)
-            .scaleEffect(0.7)
-            .frame(width: heartArea * 0.7, height: heartArea * 0.7)
+            .frame(width: 92, height: 92)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Space.s) {
                 switch live.status {
                 case .needsAccess:
