@@ -34,7 +34,7 @@ struct LiveHeartCard: View {
 
     private let heartArea: CGFloat = 132
     /// The monitoring heart sits beside the number, about as tall as the digits.
-    private let heartBox: CGFloat = 72
+    private let heartBox: CGFloat = 64
     private let ecgHeight: CGFloat = 64
 
     var body: some View {
@@ -48,7 +48,7 @@ struct LiveHeartCard: View {
                 emptyState
             }
         }
-        .card(padding: Space.l, tone: .tinted(Palette.heart))
+        .card(padding: Space.l)
         .accessibilityElement(children: .contain)
     }
 
@@ -96,15 +96,15 @@ struct LiveHeartCard: View {
             VStack(alignment: .leading, spacing: Space.s) {
                 HStack(alignment: .center, spacing: Space.m) {
                     Canvas { ctx, size in
-                        drawHeart(&ctx, center: CGPoint(x: size.width / 2, y: size.height / 2), radius: heartBox * 0.36,
+                        drawHeart(&ctx, center: CGPoint(x: size.width / 2, y: size.height / 2), radius: heartBox * 0.38,
                                   phase: beat.phase, intensity: s.intensity, freshness: s.freshness, glow: false)
                     }
                     .frame(width: heartBox, height: heartBox)
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(Int(bpm.rounded()))")
-                            .font(Typo.score(76)).foregroundStyle(Palette.ink)
+                            .font(Typo.score(60, weight: .regular)).foregroundStyle(Palette.ink)
                             .monospacedDigit().contentTransition(.numericText())
-                        Text("BPM").font(Typo.eyebrow).tracking(1.2).foregroundStyle(Palette.secondaryInk)
+                        Text("BPM").font(Typo.eyebrow).tracking(1.2).foregroundStyle(Palette.heart.opacity(0.7))
                     }
                     Spacer(minLength: 0)
                 }
@@ -140,8 +140,9 @@ struct LiveHeartCard: View {
     /// right edge with each "lub", so the spacing follows the measured rate.
     func drawECG(_ ctx: inout GraphicsContext, size: CGSize, phase: Double, bpm: Double, freshness: LiveHeartSummary.Freshness) {
         let seconds = 4.0
-        let baseline = size.height * 0.68
-        let amp = size.height * 0.62
+        // Spike near the top, the deep dip after it near the bottom.
+        let baseline = size.height * 0.6
+        let amp = size.height * 0.55
         let steps = max(2, Int(size.width / 1.5))
         var trace = Path()
         for i in 0...steps {

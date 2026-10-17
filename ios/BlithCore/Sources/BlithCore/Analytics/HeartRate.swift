@@ -113,9 +113,9 @@ public enum HeartWaveform {
     /// Normalised ECG voltage: P wave, Q dip, R spike, S dip, T wave.
     public static func ecg(phase: Double) -> Double {
         0.10 * bump(phase, 0.14, 0.03)
-            - 0.13 * bump(phase, 0.275, 0.010)
+            - 0.10 * bump(phase, 0.275, 0.010)
             + 1.00 * bump(phase, lubPhase, 0.009)
-            - 0.26 * bump(phase, 0.335, 0.011)
-            + 0.24 * bump(phase, 0.56, 0.045)
+            - 0.58 * bump(phase, 0.335, 0.010)
+            + 0.18 * bump(phase, 0.56, 0.05)
     }
 }
