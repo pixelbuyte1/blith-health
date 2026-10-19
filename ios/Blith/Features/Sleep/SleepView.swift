@@ -27,6 +27,7 @@ struct SleepView: View {
                 .padding(.horizontal, Space.page)
                 .padding(.bottom, Space.section)
                 .scrollTargetLayout()
+                .readableWidth()
             }
             .scrollPosition(id: $scrollTarget, anchor: .top)
             .task { if !standalone { await LaunchOptions.scroll { scrollTarget = $0 } } }

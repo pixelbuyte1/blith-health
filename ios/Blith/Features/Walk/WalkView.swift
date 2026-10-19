@@ -43,6 +43,7 @@ struct WalkView: View {
                 }
                 .padding(.horizontal, Space.page)
                 .padding(.bottom, Space.section)
+                .readableWidth()
             }
             .scrollIndicators(.hidden)
             .blithBackground(wash: Palette.signal.opacity(0.14))

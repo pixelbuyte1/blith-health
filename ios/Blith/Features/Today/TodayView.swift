@@ -39,17 +39,21 @@ struct TodayView: View {
                     header
                     if let s = app.snapshot {
                         let hero = TodayHero(s)
-                        heroCard(hero, s).id(hero == .movement ? "movement" : "scores")
-                        if hero == .movement { readinessNote(s) }
-                        scoreTiles(s)
-                        LiveHeartCard(live: app.liveHeart, isDemo: app.isDemo).id("live")
-                        WorkoutTodayRow(today: s.ctx.today)
-                        if hero != .movement { movementCard(s).id("movement") }
-                        worthALook(s).id("insight")
-                        overnight(s).id("monitor")
-                        more(s)
-                        if let history = app.history {
-                            SyncStatusLine(history: history, isSyncing: app.isSyncing).padding(.top, Space.s)
+                        // On iPhone Duo's inner display: the scores on the left, the rest of the day on the right.
+                        AdaptiveColumns {
+                            heroCard(hero, s).id(hero == .movement ? "movement" : "scores")
+                            if hero == .movement { readinessNote(s) }
+                            scoreTiles(s)
+                            LiveHeartCard(live: app.liveHeart, isDemo: app.isDemo).id("live")
+                            WorkoutTodayRow(today: s.ctx.today)
+                        } secondary: {
+                            if hero != .movement { movementCard(s).id("movement") }
+                            worthALook(s).id("insight")
+                            overnight(s).id("monitor")
+                            more(s)
+                            if let history = app.history {
+                                SyncStatusLine(history: history, isSyncing: app.isSyncing).padding(.top, Space.s)
+                            }
                         }
                     } else {
                         EmptyStateView(symbol: "bl.today", title: "Connect Apple Health",
