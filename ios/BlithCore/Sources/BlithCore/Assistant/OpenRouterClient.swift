@@ -34,6 +34,15 @@ public struct LLMMessage: Codable, Sendable, Hashable {
 
 public protocol ChatCompletionClient: Sendable {
     func complete(messages: [LLMMessage], tools: [ToolDefinition]) async throws -> LLMMessage
+    /// `toolChoice` "none" asks for a text answer while the tools stay declared: Anthropic models
+    /// reject a conversation that holds tool calls when the request declares no tools.
+    func complete(messages: [LLMMessage], tools: [ToolDefinition], toolChoice: String) async throws -> LLMMessage
+}
+
+extension ChatCompletionClient {
+    public func complete(messages: [LLMMessage], tools: [ToolDefinition], toolChoice: String) async throws -> LLMMessage {
+        try await complete(messages: messages, tools: toolChoice == "none" ? [] : tools)
+    }
 }
 
 public enum AssistantError: Error, LocalizedError, Sendable {
@@ -48,6 +57,28 @@ public enum AssistantError: Error, LocalizedError, Sendable {
         case .http(let code, let message): "The AI service returned an error (\(code)). \(message)"
         case .emptyResponse: "The AI service returned an empty answer."
         case .network(let m): "Couldn't reach the AI service. \(m)"
+        }
+    }
+
+    /// A rejected key (401, 403) or an empty account (402) fails the same way for every model.
+    public var isAccountProblem: Bool {
+        if case .http(let code, _) = self { return [401, 402, 403].contains(code) }
+        return false
+    }
+
+    /// The start of the line shown above an on-device answer, saying why the AI didn't answer.
+    public var fallbackReason: String {
+        switch self {
+        case .missingAPIKey: return "The AI service isn't set up in this build"
+        case .network: return "I couldn't connect to the AI service"
+        case .emptyResponse: return "The AI model returned an empty answer"
+        case .http(let code, _):
+            switch code {
+            case 401, 403: return "The AI service rejected Blith's key"
+            case 402: return "The AI account is out of credit"
+            case 429: return "The AI service is busy right now"
+            default: return "The AI service returned an error (\(code))"
+            }
         }
     }
 }
@@ -87,6 +118,10 @@ public struct OpenRouterClient: ChatCompletionClient {
     }
 
     public func complete(messages: [LLMMessage], tools: [ToolDefinition]) async throws -> LLMMessage {
+        try await complete(messages: messages, tools: tools, toolChoice: "auto")
+    }
+
+    public func complete(messages: [LLMMessage], tools: [ToolDefinition], toolChoice: String) async throws -> LLMMessage {
         guard !apiKey.isEmpty else { throw AssistantError.missingAPIKey }
         var request = URLRequest(url: endpoint, timeoutInterval: timeout)
         request.httpMethod = "POST"
@@ -95,7 +130,7 @@ public struct OpenRouterClient: ChatCompletionClient {
         request.setValue("https://github.com/pixelbuyte/blith-health", forHTTPHeaderField: "HTTP-Referer")
         request.setValue("Blith", forHTTPHeaderField: "X-Title")
         let body = RequestBody(model: model, messages: messages, tools: tools.isEmpty ? nil : tools.map(\.json),
-                               tool_choice: tools.isEmpty ? nil : "auto", temperature: 0.3, max_tokens: 1500)
+                               tool_choice: tools.isEmpty ? nil : toolChoice, temperature: 0.3, max_tokens: 3000)
         request.httpBody = try JSONEncoder().encode(body)
 
         let data: Data

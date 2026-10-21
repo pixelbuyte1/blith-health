@@ -112,8 +112,10 @@ public struct LLMAssistant: AssistantEngine {
 
         for round in 0..<maxRounds {
             progress(round == 0 ? "Thinking" : "Reading your data")
-            // Final round: no tools, force an answer.
-            let reply = try await client.complete(messages: messages, tools: round == maxRounds - 1 ? [] : HealthAssistantTools.definitions)
+            // Final round: force a text answer. The tools stay declared because the conversation already
+            // holds tool calls, and Anthropic models reject that without tool definitions.
+            let reply = try await client.complete(messages: messages, tools: HealthAssistantTools.definitions,
+                                                  toolChoice: round == maxRounds - 1 ? "none" : "auto")
             guard let calls = reply.tool_calls, !calls.isEmpty else {
                 let text = Self.plainStyle(reply.content ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { throw AssistantError.emptyResponse }

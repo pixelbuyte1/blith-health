@@ -73,20 +73,40 @@ final class AskModel {
         let onProgress: @Sendable (String) -> Void = { p in Task { @MainActor in self.progress = p } }
         do {
             if useAI, let key = AppConfig.openRouterKey {
-                let choice = currentModel
-                let engine = LLMAssistant(client: OpenRouterClient(apiKey: key, model: choice.modelID), tools: tools)
-                var reply = try await engine.respond(to: prompt, history: history, progress: onProgress)
-                reply.modelName = choice.name
-                messages.append(reply)
+                messages.append(try await answerWithAI(prompt, history: history, key: key, tools: tools, progress: onProgress))
             } else {
                 messages.append(try await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
             }
         } catch {
             var local = (try? await LocalAssistant(tools: tools).respond(to: question, history: history, progress: onProgress))
                 ?? ChatMessage(role: .assistant, text: "Something went wrong answering that.", isError: true)
-            local.text = "I couldn't reach the AI service, so here's what I can tell from your data on this iPhone:\n\n" + local.text
+            // Say why, so a rejected key or an empty account isn't mistaken for a bad connection.
+            let reason = (error as? AssistantError)?.fallbackReason ?? "The AI service didn't answer"
+            local.text = reason + ", so here's what I can tell from your data on this iPhone:\n\n" + local.text
             messages.append(local)
         }
+    }
+
+    /// Asks the chosen model; if it fails, asks the other model once before giving up. A rejected key
+    /// or an empty account fails the same way for both, so that error is passed on straight away.
+    private func answerWithAI(_ prompt: String, history: [ChatMessage], key: String, tools: HealthAssistantTools,
+                              progress: @escaping @Sendable (String) -> Void) async throws -> ChatMessage {
+        let first = currentModel
+        let order: [AskModelChoice] = first == .quick ? [.quick, .deep] : [.deep, .quick]
+        var lastError: Error = AssistantError.emptyResponse
+        for (i, choice) in order.enumerated() where i == 0 || choice.modelID != first.modelID {
+            do {
+                let engine = LLMAssistant(client: OpenRouterClient(apiKey: key, model: choice.modelID), tools: tools)
+                var reply = try await engine.respond(to: prompt, history: history, progress: progress)
+                reply.modelName = choice.name
+                return reply
+            } catch let e as AssistantError where e.isAccountProblem {
+                throw e
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError
     }
 
     /// Records the choice and clears `pendingQuestion` synchronously (which closes the sheet),

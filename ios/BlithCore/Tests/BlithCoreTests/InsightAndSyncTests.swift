@@ -231,6 +231,34 @@ struct AssistantTests {
         }
     }
 
+    /// Keeps calling tools until it's told not to, then answers. Reports whether tools were still declared.
+    struct ToolLoopClient: ChatCompletionClient {
+        func complete(messages: [LLMMessage], tools: [ToolDefinition]) async throws -> LLMMessage {
+            try await complete(messages: messages, tools: tools, toolChoice: "auto")
+        }
+        func complete(messages: [LLMMessage], tools: [ToolDefinition], toolChoice: String) async throws -> LLMMessage {
+            if toolChoice == "none" { return .assistant(tools.isEmpty ? "no tools" : "answered") }
+            return LLMMessage(role: "assistant", content: nil, tool_calls: [
+                .init(id: "x", type: "function", function: .init(name: "get_walking_summary", arguments: #"{"period":"week"}"#)),
+            ])
+        }
+    }
+
+    @Test func finalRoundForcesAnAnswerWithToolsStillDeclared() async throws {
+        let tools = HealthAssistantTools(snapshot: snapshot(T.constant(7000, days: 0...40)))
+        let reply = try await LLMAssistant(client: ToolLoopClient(), tools: tools).respond(to: "How have I been walking?", history: []) { _ in }
+        #expect(reply.text == "answered")
+    }
+
+    @Test func aiFailuresExplainThemselves() {
+        #expect(AssistantError.http(401, "").isAccountProblem)
+        #expect(AssistantError.http(402, "").isAccountProblem)
+        #expect(!AssistantError.http(429, "").isAccountProblem)
+        #expect(!AssistantError.network("offline").isAccountProblem)
+        #expect(AssistantError.http(402, "").fallbackReason == "The AI account is out of credit")
+        #expect(AssistantError.http(500, "").fallbackReason == "The AI service returned an error (500)")
+    }
+
     @Test func orchestratorRunsToolsAndReturnsStructuredMessage() async throws {
         let tools = HealthAssistantTools(snapshot: snapshot(T.constant(7000, days: 0...40)))
         let reply = try await LLMAssistant(client: ScriptedClient(), tools: tools).respond(to: "How have I been walking?", history: []) { _ in }
