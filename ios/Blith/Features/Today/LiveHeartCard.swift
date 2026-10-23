@@ -1,20 +1,6 @@
 import BlithCore
 import SwiftUI
 
-extension HeartZone {
-    /// One heart tint for every zone, stronger as intensity rises. The zone is always also said in
-    /// words, so the tint only reinforces it.
-    var color: Color {
-        switch self {
-        case .resting: Palette.heart.opacity(0.4)
-        case .warm: Palette.heart.opacity(0.55)
-        case .elevated: Palette.heart.opacity(0.7)
-        case .hard: Palette.heart.opacity(0.85)
-        case .peak: Palette.heart
-        }
-    }
-}
-
 /// Carries the beat phase between frames and eases the rate toward each new reading, so the heart
 /// speeds up and slows down smoothly instead of jumping when a new sample arrives.
 final class BeatClock {
@@ -37,8 +23,8 @@ final class BeatClock {
 }
 
 /// Live heart rate: the heart pounds at exactly the measured BPM (a "lub-dub" every 60/BPM seconds)
-/// and harder as the rate climbs above the person's resting rate. Honest about freshness: LIVE under
-/// 90 s, otherwise how long ago the reading was.
+/// and harder as the rate climbs above the person's resting rate; the ECG strip under it follows the
+/// same rate. Honest about freshness: the zone while live (under 90 s), otherwise how long ago.
 struct LiveHeartCard: View {
     let live: LiveHeartRate
     var isDemo = false
@@ -46,7 +32,9 @@ struct LiveHeartCard: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var clock = BeatClock()
 
-    private let heartArea: CGFloat = 132
+    /// The monitoring heart sits beside the number, about as tall as the digits.
+    private let heartBox: CGFloat = 64
+    private let ecgHeight: CGFloat = 64
 
     var body: some View {
         let summary = live.summary()
@@ -55,13 +43,11 @@ struct LiveHeartCard: View {
             switch live.status {
             case .ready where summary.latest != nil:
                 pounding(summary)
-                stats(summary)
-                caption(summary)
             default:
                 emptyState
             }
         }
-        .card(padding: Space.l, tone: .tinted(Palette.heart))
+        .card(padding: Space.l)
         .accessibilityElement(children: .contain)
     }
 
@@ -72,37 +58,21 @@ struct LiveHeartCard: View {
             Eyebrow(text: "Live heart rate", icon: "bl.heart", color: Palette.heart)
             Spacer()
             if live.isSimulated { MonoPill(text: "Sample", color: Palette.secondaryInk) }
-            if live.status == .ready, s.latest != nil { freshnessBadge }
+            if live.status == .ready, s.latest != nil { context }
         }
     }
 
-    /// Re-evaluated every few seconds so "LIVE" turns into "2 MIN AGO" without a new reading.
-    var freshnessBadge: some View {
+    /// "Warm · resting 57" while live; "4 min ago · resting 57" once the reading is older.
+    /// Re-evaluated every few seconds so it ages without a new reading.
+    var context: some View {
         TimelineView(.periodic(from: .now, by: 5)) { tl in
             let s = live.summary(now: tl.date)
             let age = s.age(now: tl.date) ?? 0
-            HStack(spacing: 5) {
-                Circle().fill(color(for: s.freshness)).frame(width: 6, height: 6)
-                    .opacity(s.freshness == .live && !reduceMotion ? (Int(tl.date.timeIntervalSinceReferenceDate) % 2 == 0 ? 1 : 0.35) : 1)
-                Text(badgeText(s.freshness, age: age)).font(Typo.eyebrow).tracking(1.1)
-            }
-            .foregroundStyle(color(for: s.freshness))
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(Capsule().fill(color(for: s.freshness).opacity(0.14)))
-            .accessibilityLabel(s.freshness == .live ? "Live" : "Last reading \(ageText(age)) ago")
+            let lead = s.freshness == .live ? s.zone.label : "\(ageText(age)) ago"
+            Text(lead + (s.resting.map { " · resting \(Int($0.rounded()))" } ?? ""))
+                .font(Typo.caption).foregroundStyle(Palette.secondaryInk)
+                .accessibilityLabel(s.freshness == .live ? "Live, \(s.zone.label.lowercased()) zone" : "Last reading \(ageText(age)) ago")
         }
-    }
-
-    /// Rust stays reserved for readings outside the usual, so an older reading is plain ink.
-    func color(for f: LiveHeartSummary.Freshness) -> Color {
-        switch f {
-        case .live: Palette.mint
-        case .recent, .stale, .none: Palette.secondaryInk
-        }
-    }
-
-    func badgeText(_ f: LiveHeartSummary.Freshness, age: TimeInterval) -> String {
-        f == .live ? "LIVE" : "\(ageText(age).uppercased()) AGO"
     }
 
     func ageText(_ age: TimeInterval) -> String {
@@ -114,141 +84,71 @@ struct LiveHeartCard: View {
         }
     }
 
-    // MARK: The pounding heart
+    // MARK: The pounding heart and ECG
 
     func pounding(_ s: LiveHeartSummary) -> some View {
         let bpm = s.bpm ?? 70
-        let zone = s.zone
         // Pound while the reading is fresh enough to mean something; hold still once it's old.
         let animating = !reduceMotion && scenePhase == .active && s.freshness != .stale
-        return ZStack(alignment: .topLeading) {
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: !animating)) { tl in
-                let phase = animating ? clock.advance(to: tl.date, target: bpm).phase : 0.86
-                Canvas { ctx, size in
-                    drawHeart(&ctx, size: size, phase: phase, intensity: s.intensity, freshness: s.freshness)
-                }
-                .frame(height: heartArea)
-            }
-            HStack(alignment: .center, spacing: 0) {
-                Spacer().frame(width: heartArea + Space.s)
-                VStack(alignment: .leading, spacing: 6) {
+        return TimelineView(.animation(minimumInterval: 1 / 30, paused: !animating)) { tl in
+            let beat = animating ? clock.advance(to: tl.date, target: bpm) : (phase: 0.86, bpm: bpm)
+            VStack(alignment: .leading, spacing: Space.s) {
+                HStack(alignment: .center, spacing: Space.m) {
+                    heart(phase: beat.phase, intensity: s.intensity, freshness: s.freshness)
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(Int(bpm.rounded()))")
-                            .font(Typo.score(76)).foregroundStyle(Palette.ink)
+                            .font(Typo.score(60, weight: .regular)).foregroundStyle(Palette.ink)
                             .monospacedDigit().contentTransition(.numericText())
-                        Text("BPM").font(Typo.eyebrow).tracking(1.2).foregroundStyle(Palette.secondaryInk)
+                        Text("BPM").font(Typo.eyebrow).tracking(1.2).foregroundStyle(Palette.heart.opacity(0.7))
                     }
-                    HStack(spacing: Space.s) {
-                        zoneLabel(zone)
-                        if let above = s.aboveResting {
-                            Text(above >= 3 ? "\(Int(above.rounded())) above resting" : "at resting")
-                                .font(.caption).foregroundStyle(Palette.secondaryInk)
-                        }
-                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                Canvas { ctx, size in
+                    drawECG(&ctx, size: size, phase: beat.phase, bpm: beat.bpm, freshness: s.freshness)
+                }
+                .frame(height: ecgHeight)
             }
-            .frame(height: heartArea)
-            .allowsHitTesting(false)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Heart rate \(Int(bpm.rounded())) beats per minute, \(zone.label.lowercased()) zone")
+        .accessibilityLabel("Heart rate \(Int(bpm.rounded())) beats per minute, \(s.zone.label.lowercased()) zone")
         .accessibilityValue(s.freshness == .live ? "Live" : "Last reading \(ageText(s.age(now: Date()) ?? 0)) ago")
     }
 
-    /// The zone in words. The words keep full contrast (solid from Hard up); the ring around them
-    /// takes the zone's heart tint, which strengthens with intensity.
-    func zoneLabel(_ zone: HeartZone) -> some View {
-        let solid = zone >= .hard
-        return Text(zone.label.uppercased())
-            .font(Typo.eyebrow).tracking(0.9)
-            .foregroundStyle(solid ? Palette.canvas : Palette.heart)
-            .padding(.horizontal, 9).padding(.vertical, 5)
-            .background(Capsule().fill(solid ? Palette.heart : Palette.heart.opacity(0.10)))
-            .overlay(Capsule().strokeBorder(zone.color, lineWidth: 1))
-    }
-
-    func drawHeart(_ ctx: inout GraphicsContext, size: CGSize, phase: Double, intensity: Double, freshness: LiveHeartSummary.Freshness) {
+    /// The system heart (SF Symbols `heart.fill`), flat in the heart colour. It swells with each
+    /// "lub-dub", harder as intensity rises above the person's resting rate.
+    func heart(phase: Double, intensity: Double, freshness: LiveHeartSummary.Freshness) -> some View {
         let thump = HeartWaveform.thump(phase: phase)
+        let scale = 1 + (0.09 + 0.15 * intensity) * thump
         let dim = freshness == .live ? 1.0 : (freshness == .recent ? 0.9 : 0.6)
-        let center = CGPoint(x: heartArea / 2, y: heartArea / 2)
-        let radius: CGFloat = 40
-        // Harder beats at higher intensity: the heart swells more.
-        let swell = 0.09 + 0.15 * intensity
-        let scale = 1 + swell * thump
-        // One heart colour in every zone, adapted to light and dark.
-        let tint = Palette.heart
-
-        // The glow underlay only shows when nothing is being monitored; while a reading is live or
-        // recent the heart stands on its own.
-        if freshness == .stale {
-            ctx.fill(Path(ellipseIn: CGRect(x: center.x - radius * 2.1, y: center.y - radius * 2.1, width: radius * 4.2, height: radius * 4.2)),
-                     with: .radialGradient(Gradient(colors: [tint.opacity(0.18), .clear]),
-                                           center: center, startRadius: 0, endRadius: radius * 1.7))
-        }
-
-        var heart = Self.heartPath(center: center, halfWidth: radius * scale)
-        ctx.fill(heart, with: .color(tint.opacity(dim)))
-        // A soft highlight on the upper left lobe.
-        heart = Self.heartPath(center: CGPoint(x: center.x - radius * 0.34, y: center.y - radius * 0.34), halfWidth: radius * 0.22 * scale)
-        ctx.fill(heart, with: .color(.white.opacity(0.22 * dim)))
+        return Image(systemName: "heart.fill")
+            .resizable().scaledToFit()
+            .foregroundStyle(Palette.heart.opacity(dim))
+            .frame(width: heartBox * 0.78, height: heartBox * 0.78)
+            .scaleEffect(scale)
+            .frame(width: heartBox, height: heartBox)
+            .accessibilityHidden(true)
     }
 
-    /// The classic parametric heart, centred and scaled to `halfWidth`.
-    static func heartPath(center: CGPoint, halfWidth: CGFloat) -> Path {
-        let s = halfWidth / 16
-        var p = Path()
-        for i in 0...96 {
-            let t = Double(i) / 96 * 2 * .pi
-            let x = 16 * pow(sin(t), 3)
-            let y = -(13 * cos(t) - 5 * cos(2 * t) - 2 * cos(3 * t) - cos(4 * t))
-            let pt = CGPoint(x: center.x + CGFloat(x) * s, y: center.y + (CGFloat(y) - 4.4) * s)
-            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+    /// An ECG strip scrolling right to left: about four seconds of trace, its R spike landing at the
+    /// right edge with each "lub", so the spacing follows the measured rate.
+    func drawECG(_ ctx: inout GraphicsContext, size: CGSize, phase: Double, bpm: Double, freshness: LiveHeartSummary.Freshness) {
+        let seconds = 4.0
+        // Spike near the top, the deep dip after it near the bottom.
+        let baseline = size.height * 0.6
+        let amp = size.height * 0.55
+        let steps = max(2, Int(size.width / 1.5))
+        var trace = Path()
+        for i in 0...steps {
+            let x = size.width * CGFloat(i) / CGFloat(steps)
+            let back = seconds * Double(1 - x / size.width)
+            // The beat phase `back` seconds ago.
+            var p = (phase - back * bpm / 60).truncatingRemainder(dividingBy: 1)
+            if p < 0 { p += 1 }
+            let y = baseline - amp * CGFloat(HeartWaveform.ecg(phase: p))
+            if i == 0 { trace.move(to: CGPoint(x: x, y: y)) } else { trace.addLine(to: CGPoint(x: x, y: y)) }
         }
-        p.closeSubpath()
-        return p
-    }
-
-    // MARK: Stats
-
-    func stats(_ s: LiveHeartSummary) -> some View {
-        HStack(alignment: .center, spacing: Space.m) {
-            stat("Resting", s.resting.map { "\(Int($0.rounded()))" })
-            divider
-            stat("Low today", s.minToday.map { "\(Int($0.rounded()))" })
-            divider
-            stat("High today", s.maxToday.map { "\(Int($0.rounded()))" })
-            divider
-            VStack(alignment: .leading, spacing: 3) {
-                Text("LAST HOUR").font(Typo.eyebrow).tracking(1).foregroundStyle(Palette.secondaryInk)
-                if s.lastHour.count >= 3 {
-                    MiniSpark(values: s.lastHour.map(\.bpm), color: Palette.heart).frame(height: 26)
-                } else {
-                    Text("–").font(Typo.number(18)).foregroundStyle(Palette.tertiaryInk)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    var divider: some View { Rectangle().fill(Palette.hairline).frame(width: 1, height: 30) }
-
-    func stat(_ title: String, _ value: String?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title.uppercased()).font(Typo.eyebrow).tracking(1).foregroundStyle(Palette.secondaryInk).lineLimit(1).minimumScaleFactor(0.8)
-            Text(value ?? "–").font(Typo.number(22)).foregroundStyle(Palette.ink).monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    func caption(_ s: LiveHeartSummary) -> some View {
-        if s.freshness == .live {
-            Text("Updating as Health receives new readings.").font(.caption2).foregroundStyle(Palette.tertiaryInk)
-        } else {
-            Text("Apple Watch records heart rate every few minutes at rest. Start a Workout on your watch for a reading every few seconds.")
-                .font(.caption2).foregroundStyle(Palette.tertiaryInk).fixedSize(horizontal: false, vertical: true)
-        }
+        let dim = freshness == .live ? 1.0 : (freshness == .recent ? 0.75 : 0.45)
+        ctx.stroke(trace, with: .color(Palette.heart.opacity(dim)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
     }
 
     // MARK: Empty states
@@ -256,12 +156,16 @@ struct LiveHeartCard: View {
     @ViewBuilder
     var emptyState: some View {
         HStack(alignment: .center, spacing: Space.l) {
-            Canvas { ctx, size in
-                drawHeart(&ctx, size: size, phase: 0.86, intensity: 0, freshness: .stale)
+            // Nothing is being monitored: the same heart, quieter, with a soft glow behind it.
+            ZStack {
+                Circle().fill(RadialGradient(colors: [Palette.heart.opacity(0.18), .clear], center: .center, startRadius: 0, endRadius: 46))
+                Image(systemName: "heart.fill")
+                    .resizable().scaledToFit()
+                    .foregroundStyle(Palette.heart.opacity(0.6))
+                    .frame(width: 56, height: 56)
             }
-            .frame(width: heartArea, height: heartArea)
-            .scaleEffect(0.7)
-            .frame(width: heartArea * 0.7, height: heartArea * 0.7)
+            .frame(width: 92, height: 92)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Space.s) {
                 switch live.status {
                 case .needsAccess:
