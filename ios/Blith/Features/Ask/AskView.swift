@@ -41,6 +41,7 @@ struct AskView: View {
                     }
                     .padding(.horizontal, Space.page)
                     .padding(.vertical, Space.l)
+                    .readableWidth()
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .onChange(of: ask.messages.count) { _, _ in
@@ -198,6 +199,7 @@ struct AskView: View {
         }
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.s)
+        .readableWidth()
     }
 
     func submit() {

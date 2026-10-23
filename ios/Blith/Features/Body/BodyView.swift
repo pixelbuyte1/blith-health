@@ -38,13 +38,17 @@ struct BodyView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Space.l) {
                         header
-                        stage
-                        WorkoutTodayCard(planRaw: $planRaw, today: today) { editingPlan = true }
-                        regionPanel.id("bodyPanel")
-                        timeline
-                        historyList
-                        Text("3D figure and muscles derived from BodyParts3D (© The Database Center for Life Science, CC BY-SA 2.1 JP) and Z-Anatomy (CC BY-SA 4.0). For orientation and notes, not a medical atlas.")
-                            .font(Typo.geist(11, relativeTo: .caption2)).foregroundStyle(Palette.tertiaryInk)
+                        // On iPhone Duo's inner display: the figure on the left, plan and notes on the right.
+                        AdaptiveColumns {
+                            stage
+                        } secondary: {
+                            WorkoutTodayCard(planRaw: $planRaw, today: today) { editingPlan = true }
+                            regionPanel.id("bodyPanel")
+                            timeline
+                            historyList
+                            Text("3D figure and muscles derived from BodyParts3D (© The Database Center for Life Science, CC BY-SA 2.1 JP) and Z-Anatomy (CC BY-SA 4.0). For orientation and notes, not a medical atlas.")
+                                .font(Typo.geist(11, relativeTo: .caption2)).foregroundStyle(Palette.tertiaryInk)
+                        }
                     }
                     .padding(.horizontal, Space.page)
                     .padding(.bottom, Space.section)

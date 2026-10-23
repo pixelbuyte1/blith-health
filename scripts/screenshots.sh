@@ -126,4 +126,40 @@ for DEV in "$SMALL" "$LARGE"; do
   cp ~/Library/Logs/DiagnosticReports/Blith* "$OUT/" 2>/dev/null || true
   xcrun simctl shutdown "$UDID" || true
 done
+
+# iPhone Duo, when this Xcode has its simulator: the wide two-column layout on the inner display
+# (regular width) and the single column on the outer one. Never fails the run.
+duo_shots() {
+  local udid type
+  udid=$(xcrun simctl list devices available -j | python3 -c "
+import json,sys
+ds=[d for d in json.load(sys.stdin)['devices'].get('$RUNTIME',[]) if 'Duo' in d['name']]
+print(ds[0]['udid'] if ds else '')")
+  if [ -z "$udid" ]; then
+    type=$(xcrun simctl list devicetypes -j | python3 -c "
+import json,sys
+ts=[t for t in json.load(sys.stdin)['devicetypes'] if 'Duo' in t['name']]
+print(ts[0]['identifier'] if ts else '')")
+    [ -n "$type" ] || { echo "No iPhone Duo simulator in this Xcode; skipping Duo screenshots"; return 0; }
+    udid=$(xcrun simctl create "iPhone Duo" "$type" "$RUNTIME")
+  fi
+  echo "iPhoneDuo ($udid)"
+  xcrun simctl boot "$udid" 2>/dev/null || true
+  xcrun simctl bootstatus "$udid" -b >/dev/null
+  xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+  xcrun simctl install "$udid" "$APP"
+  local DEMO=(-BlithDemo balanced -BlithAIConsent NO -BlithClockHour 15.5)
+  for mode in light dark; do
+    xcrun simctl ui "$udid" appearance "$mode"
+    local m=${mode:0:1}; m=$(echo "$m" | tr '[:lower:]' '[:upper:]')
+    shoot "$udid" "iPhoneDuo-${m}01-today" "${DEMO[@]}" -BlithTab today
+    shoot "$udid" "iPhoneDuo-${m}04-activity" "${DEMO[@]}" -BlithTab walk -BlithPeriod month
+    shoot "$udid" "iPhoneDuo-${m}05-sleep" "${DEMO[@]}" -BlithTab sleep
+    xcrun simctl launch "$udid" "$BUNDLE" "${DEMO[@]}" -BlithTab body >/dev/null; sleep 15
+    shoot "$udid" "iPhoneDuo-${m}07-body" "${DEMO[@]}" -BlithTab body -BlithBodyYaw 28
+    shoot "$udid" "iPhoneDuo-${m}12-ask" "${DEMO[@]}" -BlithTab ask -BlithAskScript YES
+  done
+  xcrun simctl shutdown "$udid" || true
+}
+duo_shots || echo "Duo screenshots failed; the iPhone screenshots above are unaffected"
 ls -1 "$OUT"
