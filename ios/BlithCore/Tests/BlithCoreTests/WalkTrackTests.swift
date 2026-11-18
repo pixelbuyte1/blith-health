@@ -6,10 +6,13 @@ import Testing
 private func line(from start: Date, seconds: Int, every: Int = 5, speed: Double = 1.4, accuracy: Double = 5,
                   lat0: Double = 51.5, lon: Double = -0.1) -> [TrackPoint] {
     let metresPerDegree = Geo.earthRadius * .pi / 180
-    return stride(from: 0, through: seconds, by: every).map { t in
-        TrackPoint(time: start.addingTimeInterval(Double(t)), latitude: lat0 + speed * Double(t) / metresPerDegree,
-                   longitude: lon, horizontalAccuracy: accuracy)
+    var points: [TrackPoint] = []
+    for t in stride(from: 0, through: seconds, by: every) {
+        let latitude: Double = lat0 + speed * Double(t) / metresPerDegree
+        points.append(TrackPoint(time: start.addingTimeInterval(Double(t)), latitude: latitude,
+                                 longitude: lon, horizontalAccuracy: accuracy))
     }
+    return points
 }
 
 private let t0 = Date(timeIntervalSince1970: 1_790_000_000)
@@ -37,9 +40,12 @@ struct WalkTrackTests {
 
     @Test func standingStillDoesNotAddDistance() {
         // Ten minutes of fixes wobbling around one spot by a metre or two.
-        let pts = (0...120).map { i in
-            TrackPoint(time: t0.addingTimeInterval(Double(i * 5)), latitude: 51.5 + Double(i % 3) * 0.000_01,
-                       longitude: -0.1 + Double(i % 2) * 0.000_01, horizontalAccuracy: 8)
+        var pts: [TrackPoint] = []
+        for i in 0...120 {
+            let time: Date = t0.addingTimeInterval(Double(i * 5))
+            let latitude: Double = 51.5 + Double(i % 3) * 0.000_01
+            let longitude: Double = -0.1 + Double(i % 2) * 0.000_01
+            pts.append(TrackPoint(time: time, latitude: latitude, longitude: longitude, horizontalAccuracy: 8))
         }
         #expect(TrackProcessor.process(pts).distance < 5)
     }
@@ -103,7 +109,9 @@ struct WalkTrackTests {
         let now = pts.last!.time
         let pace = WalkPace.current(track, now: now, units: .metric)
         #expect(pace != nil)
-        #expect(abs((pace ?? 0) - 1000 / 1.4) < 20)
+        let expected: Double = 1000 / 1.4
+        let error: Double = abs((pace ?? 0) - expected)
+        #expect(error < 20)
         #expect(WalkPace.current(track, now: now.addingTimeInterval(60), units: .metric) == nil)
         #expect(WalkPace.average(distance: 20, movingTime: 30, units: .metric) == nil)
         #expect(WalkPace.clock(3909) == "1:05:09")
