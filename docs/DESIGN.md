@@ -167,3 +167,28 @@ selected. A card under the figure reads "Chest day" with a tick circle, and Toda
 ticked day glows calmer. The card also shows the last seven days (filled = done, outlined = planned) and
 "4 of the last 5 planned sessions done". The plan and ticks stay on this iPhone (`BlithWorkoutPlan`), and
 are separate from body notes, which are for how the body feels.
+
+## Walks (Activity)
+
+Stage 1 of routes and GPS walk tracking. Designs: the "Blith Routes" canvas (18 screens; stage 1 builds
+ActivityWalks, StartWalk, LiveTracking, Paused, Finish, Summary and History).
+
+- **Where:** a "Walks · routes" card under Load in Activity (no new tab), with Start walk and Walk history.
+  The walk runs full screen (Start → Recording ⇄ Paused → Finish → Summary) over the tabs.
+- **What counts** (`BlithCore/Walks`, tested on Linux): fixes worse than ±25 m or faster than 5 m/s are
+  ignored; fixes are lightly smoothed; jitter under 3 m adds nothing. No good fix for 30 s while walking is a
+  GPS gap: the timer keeps running, the map draws nothing across it and its distance isn't counted. Pauses
+  are cut out of moving time, splits and distance.
+- **Every number names its source:** GPS (distance, pace, speed, splits), iPhone (steps, from the motion
+  sensor), Barometer (climb), Apple Watch (heart rate, when a Watch provides it). Missing data reads
+  "Not available"; a section with nothing to show is hidden, never drawn as zero.
+- **Counted once:** a saved walk is one HKWorkout (walking, outdoor) with pause events, distance samples
+  along good GPS only and an HKWorkoutRoute. Steps and energy are never written. If the Watch already
+  recorded an overlapping walk, Blith keeps it and writes nothing. Walk history lists each walk once (GPS
+  walks, plus Health-only walks tagged "Health" with no map).
+- **Interrupted walks:** the walk is checkpointed every 15 s; on the next launch Blith offers Resume (the
+  unknown time in between counts as a pause) or Save (as it was at the last checkpoint).
+- **Colour:** walks use `Palette.signal`, Activity's colour. Recording is signal + record glyph + "Recording";
+  paused is ink + pause glyph + "Paused".
+- **Stage 2 (not built):** route discovery, explore map, search, route details, saved routes, preferences,
+  weekly insights, records, the Today walk card and Ask answers about walks.

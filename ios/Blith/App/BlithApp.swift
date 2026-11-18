@@ -51,8 +51,14 @@ struct MainTabView: View {
     @Environment(AppModel.self) private var app
     @Environment(AppRouter.self) private var router
 
+    var interruptedMessage: String {
+        guard let walk = app.walks.interrupted?.walk else { return "" }
+        return "A walk you started at \(WalkFormat.time(walk.start)) was still recording when Blith closed. Resume it, or save it as it was at \(WalkFormat.time(walk.end))."
+    }
+
     var body: some View {
         @Bindable var router = router
+        @Bindable var walks = app.walks
         TabView(selection: $router.tab) {
             Tab("Today", image: "bl.today", value: AppTab.today) {
                 TodayView()
@@ -75,6 +81,19 @@ struct MainTabView: View {
             SheetHost(sheet: sheet)
                 .environment(app)
                 .environment(router)
+        }
+        .fullScreenCover(isPresented: $walks.isPresented) {
+            WalkFlowView()
+                .environment(app)
+                .environment(router)
+        }
+        .task { app.walks.checkForInterruptedWalk() }
+        .alert("Unfinished walk", isPresented: Binding(get: { app.walks.interrupted != nil && !app.walks.isPresented }, set: { _ in })) {
+            Button("Resume walk") { app.walks.resumeInterrupted() }
+            Button("Save it") { Task { await app.walks.finishInterrupted(app: app) } }
+            Button("Discard", role: .destructive) { app.walks.discardInterrupted() }
+        } message: {
+            Text(interruptedMessage)
         }
     }
 }

@@ -52,6 +52,8 @@ final class AppModel {
     let ask = AskModel()
     let healthKit = AppleHealthProvider()
     let liveHeart = LiveHeartRate()
+    /// GPS walk recording (Activity › Walks).
+    let walks = WalkRecorder()
     private let store = LocalHealthStore(directory: LocalHealthStore.defaultDirectory())
 
     init() {
@@ -246,6 +248,7 @@ final class AppModel {
 
     func deleteAllData() async {
         await store.deleteAll()
+        walks.deleteAll()
         Persistence.reset()
         history = nil
         snapshot = nil

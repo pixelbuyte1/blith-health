@@ -91,6 +91,7 @@ for DEV in "$SMALL" "$LARGE"; do
   shoot "$UDID" "$NAME-02c-today-live-hard" "${DEMO[@]}" -BlithTab today -BlithScrollTo live -BlithLiveBPM 152
   shoot "$UDID" "$NAME-03-today-movement" "${DEMO[@]}" -BlithTab today -BlithScrollTo movement
   shoot "$UDID" "$NAME-04-activity" "${DEMO[@]}" -BlithTab walk -BlithPeriod month
+  shoot "$UDID" "$NAME-04b-activity-walks" "${DEMO[@]}" -BlithTab walk -BlithScrollTo walks
   shoot "$UDID" "$NAME-05-sleep" "${DEMO[@]}" -BlithTab sleep
   shoot "$UDID" "$NAME-06-sleep-stages" "${DEMO[@]}" -BlithTab sleep -BlithScrollTo stages
   # Warm up SceneKit's shader cache so the first 3D shot isn't captured mid-compile.
