@@ -58,6 +58,9 @@ targets:
       - package: BlithCore
         product: BlithCore
       - sdk: HealthKit.framework
+      - sdk: CoreLocation.framework
+      - sdk: CoreMotion.framework
+      - sdk: MapKit.framework
     entitlements:
       path: Blith/Resources/Blith.entitlements
       properties:
@@ -89,7 +92,13 @@ targets:
           - GeistMono-Medium.ttf
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSHealthUpdateUsageDescription: Blith doesn't save anything to Apple Health. It only reads the data you choose to share, and Apple requires this description because the app uses HealthKit.
+        NSHealthUpdateUsageDescription: Blith saves walks you record with GPS in Blith to Apple Health, as a walking workout with its route and distance, so the rest of your health data stays complete. It never writes anything else, and it doesn't save a walk your Apple Watch already recorded.
+        NSLocationWhenInUseUsageDescription: Blith uses your location only while you record a walk, to draw your route and measure distance, pace and splits. It stays on this iPhone and in Apple Health, and isn't sent anywhere else.
+        NSMotionUsageDescription: Blith counts your steps and measures climb with the iPhone's motion sensor and barometer while you record a walk.
+        NSLocationTemporaryUsageDescriptionDictionary:
+          WalkTracking: Precise location lets Blith measure your walk's distance and draw its route accurately.
+        UIBackgroundModes:
+          - location
         NSHealthShareUsageDescription: Blith reads the health data you choose, such as steps, walking, workouts, sleep, weight and heart rate, to learn your personal baselines and explain how you're changing. Heart rate is also shown live on the Today screen. It's stored on this iPhone and never used for advertising.
         # AI configuration, supplied by Config/Secrets.xcconfig (gitignored) or CI.
         OPENROUTER_API_KEY: $(OPENROUTER_API_KEY)

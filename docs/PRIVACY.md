@@ -16,12 +16,23 @@ With your permission, Blith reads from Apple Health only the categories you choo
 - **Vitals:** blood oxygen, respiratory rate, wrist temperature during sleep, VO₂ max.
 - **Heart:** resting heart rate, walking heart rate average, heart rate variability, and heart rate readings (shown live on Today; only the last 24 hours are held in memory and nothing new is stored for them).
 
-Blith never writes to Apple Health. You can review or revoke access at any time in
-**Settings › Health › Data Access & Devices › Blith**.
+Blith writes to Apple Health only when you save a walk you recorded with GPS in Blith: one
+walking workout with its pauses, the distance measured along good GPS, and the route. It never
+writes steps or active energy (your iPhone and Apple Watch already record those), and if your
+Apple Watch already recorded the same walk, Blith keeps the Watch's walk and writes nothing.
+Blith asks for this permission the first time you save a walk. You can review or revoke access
+at any time in **Settings › Health › Data Access & Devices › Blith**.
+
+## Location and motion (walks)
+
+Blith uses your location only while you record a walk, including with the screen locked (iOS
+shows a blue location indicator while it does). It uses the iPhone's motion sensor for steps and
+the barometer for climb during the walk. The route stays on your iPhone and, when you save the
+walk, in Apple Health. It is never sent to the AI assistant or anywhere else.
 
 ## Where your data is stored
 
-Your imported history, settings and body notes are stored **on your iPhone**, in the app's
+Your imported history, settings, body notes and recorded walks are stored **on your iPhone**, in the app's
 private storage, encrypted by iOS while your device is locked. Ask conversations are kept
 in memory only and are gone when you close the app. There are no Blith accounts
 and no Blith servers holding your health data.

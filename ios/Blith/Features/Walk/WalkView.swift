@@ -6,6 +6,7 @@ struct WalkView: View {
     @Environment(AppRouter.self) private var router
     @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 52
     @State private var selectedBucket: ChartBucket?
+    @State private var scrollTarget: String?
 
     var body: some View {
         @Bindable var router = router
@@ -24,6 +25,7 @@ struct WalkView: View {
                         }
                         measured(s, period: router.walkPeriod)
                         LoadSection(snapshot: s)
+                        WalksSection().id("walks")
                         meaning(s)
                         signature(s)
                         gait(s)
@@ -39,17 +41,27 @@ struct WalkView: View {
                         EmptyStateView(symbol: "bl.walk", title: "No steps yet",
                                        message: "Steps come from your iPhone or Apple Watch through Apple Health. If you've limited access, you can change it in Settings › Health › Data Access.",
                                        actionTitle: "Connected data", action: { router.sheet = .profile })
+                        WalksSection().id("walks")
                     }
                 }
+                .scrollTargetLayout()
                 .padding(.horizontal, Space.page)
                 .padding(.bottom, Space.section)
                 .readableWidth()
             }
+            .scrollPosition(id: $scrollTarget, anchor: .top)
+            .task { await LaunchOptions.scroll { scrollTarget = $0 } }
             .scrollIndicators(.hidden)
             .blithBackground(wash: Palette.signal.opacity(0.14))
             .refreshable { await app.refresh(force: true) }
             .toolbar(.hidden, for: .navigationBar)
             .onChange(of: router.walkPeriod) { _, _ in selectedBucket = nil }
+            .navigationDestination(for: WalkRoute.self) { route in
+                switch route {
+                case .history: WalkHistoryView()
+                case .summary(let id): WalkSummaryDestination(id: id)
+                }
+            }
         }
     }
 

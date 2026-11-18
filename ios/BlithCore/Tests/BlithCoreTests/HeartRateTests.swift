@@ -21,8 +21,8 @@ struct HeartRateTests {
 
     @Test func freshnessIsLiveRecentOrStale() {
         let live = LiveHeartSummary.make(samples: Self.samples([(30, 72)]), now: T.now, resting: 58, calendar: T.calendar)
-        let recent = LiveHeartSummary.make(samples: Self.samples([(12 * 60, 72)]), now: T.now, resting: 58, calendar: T.calendar)
-        let stale = LiveHeartSummary.make(samples: Self.samples([(3 * 3600, 72)]), now: T.now, resting: 58, calendar: T.calendar)
+        let recent = LiveHeartSummary.make(samples: Self.samples([(12.0 * 60, 72)]), now: T.now, resting: 58, calendar: T.calendar)
+        let stale = LiveHeartSummary.make(samples: Self.samples([(3.0 * 3600, 72)]), now: T.now, resting: 58, calendar: T.calendar)
         let none = LiveHeartSummary.make(samples: [], now: T.now, resting: 58, calendar: T.calendar)
         #expect(live.freshness == .live)
         #expect(recent.freshness == .recent)
